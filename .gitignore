@@ -1,0 +1,56 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+*.swo
+
+# IDE (local, per-developer)
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent local/private state
+# .claude/skills/** is versioned (Spec Kit generated skills) — everything else
+# under .claude/ is treated as local/private agent state and ignored.
+# Operational note: secrets must never be placed inside .claude/skills/**.
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+
+# Codex local/private state
+.codex/
+.codex-local/
+
+# Antigravity local/private state
+.antigravity/
+.antigravity-local/

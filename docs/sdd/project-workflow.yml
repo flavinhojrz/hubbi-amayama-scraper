@@ -1,0 +1,82 @@
+version: "1.0"
+project: hubbi-amayama-scraper
+
+authority:
+  constitution: .specify/memory/constitution.md
+  execution_policy: docs/sdd/EXECUTION_POLICY.md
+  product_owner: Flávio
+
+# Representação declarativa (não executável) do workflow SDD normativo do
+# projeto. NÃO é um GitHub Actions workflow e não aciona automação de merge.
+# A autoridade deste arquivo é subordinada a docs/sdd/EXECUTION_POLICY.md,
+# que por sua vez é subordinada a .specify/memory/constitution.md.
+
+stages:
+  - id: constitution
+    actor: Product Owner
+    required_previous_gate: null
+    next_gate: po_approval_constitution
+    automatic_advance: false
+
+  - id: specify
+    actor: ChatGPT
+    required_previous_gate: po_approval_constitution
+    next_gate: po_approval_specify
+    automatic_advance: false
+
+  - id: clarify
+    actor: ChatGPT
+    required_previous_gate: po_approval_specify
+    next_gate: po_approval_specify
+    automatic_advance: false
+    notes: "Executado apenas quando necessário; retorna ao gate de aprovação de specify."
+
+  - id: plan
+    actor: ChatGPT
+    required_previous_gate: po_approval_specify
+    next_gate: po_approval_plan
+    automatic_advance: false
+
+  - id: tasks
+    actor: ChatGPT
+    required_previous_gate: po_approval_plan
+    next_gate: po_approval_tasks
+    automatic_advance: false
+    notes: >
+      tasks requires PO approval before Claude implementation may begin.
+      speckit.implement must never run automatically after speckit.tasks.
+
+  - id: implementation
+    actor: Claude
+    required_previous_gate: po_approval_tasks
+    next_gate: code_review
+    automatic_advance: false
+
+  - id: code_review
+    actor: Codex
+    required_previous_gate: implementation
+    next_gate: evidence_consolidation
+    automatic_advance: false
+    notes: >
+      On REQUEST_CHANGES, control returns to actor Claude for correction,
+      followed by a new review cycle. Codex approval alone never authorizes
+      merge.
+
+  - id: evidence_consolidation
+    actor: ChatGPT
+    required_previous_gate: code_review
+    next_gate: po_validation
+    automatic_advance: false
+
+  - id: po_validation
+    actor: Product Owner
+    required_previous_gate: evidence_consolidation
+    next_gate: merge
+    automatic_advance: false
+
+  - id: merge
+    actor: Product Owner
+    required_previous_gate: po_validation
+    next_gate: null
+    automatic_advance: false
+    notes: "requires explicit PO authorization. No automated merge is configured or implied by this file."
