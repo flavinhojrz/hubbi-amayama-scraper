@@ -8,7 +8,17 @@
 
 - Python ≥ 3.11 instalado, ambiente virtual criado (`python -m venv .venv`), pacote instalado em modo editável (`pip install -e .[dev]`).
 - Nenhuma credencial, rede ou navegador é necessário para os cenários abaixo — o núcleo é 100% testável offline (Constitution §12), a partir de fixtures de HTML já capturadas.
-- Fixtures de HTML residem em `tests/fixtures/` (a criar em TASKS), incluindo, no mínimo, os três pares de evidência documentados em `spec.md` (SC-005) e o caso `S7BC8A-61189` vs. outra spec com o mesmo `model_code` (ponto 24 do PLAN).
+- Fixtures de HTML residem em `tests/fixtures/` (a criar em TASKS), organizadas por nível de captura (`MARKET_INDEX`/`SPEC_NAVIGATION`/`GROUP_DETAIL` — contracts/domain-contracts.md). Fixtures de regressão dos três pares de evidência (SC-005) e do caso `S7BC8A-61189` (ponto 24 do PLAN) refletem a granularidade real por `spec/category/group` (manifesto + páginas de detalhe individuais) — nunca uma única "mega-página" sintética fingindo conter a árvore inteira; fixtures unitárias sintéticas continuam permitidas para os demais cenários, sempre identificadas como sintéticas.
+
+## Cenário 0 — Enumeração do market index (AMA BR → spec entries)
+
+**Valida**: FR-001, contracts/domain-contracts.md "Nível A", data-model.md §14.
+
+```
+pytest tests/parser/test_market_index_discovery.py
+```
+
+**Esperado**: dada uma fixture de página de índice do mercado `AMA-BR` com múltiplas spec entries, `parse_market_spec_index()` produz uma `DiscoveredSpecEntry` por entrada, preservando `market`/`model_code`/`amayama_catalog_id`/`production_period_raw`/`source_url` quando presentes, e `grade`/`configuração` somente quando comprovados; duas entradas com o mesmo `model_code` e `amayama_catalog_id` diferentes produzem duas `DiscoveredSpecEntry` distintas (nunca uma só); um período open-ended e um campo opcional ausente não produzem erro; uma estrutura inesperada produz falha explícita (drift), nunca uma lista vazia silenciosa.
 
 ## Cenário 1 — Identidade nunca depende só de `model_code`
 
@@ -18,7 +28,7 @@
 pytest tests/regression/test_identity_non_uniqueness.py
 ```
 
-**Esperado**: duas fixtures com `model_code == "S7BC8A"` e `amayama_catalog_id` diferentes (`62184` e `61189`, por exemplo) produzem duas `SpecIdentity`/`stable_key` distintas após parsing + normalização — nunca uma única entrada.
+**Esperado**: duas `DiscoveredSpecEntry`/fixtures com `model_code == "S7BC8A"` e `amayama_catalog_id` diferentes (`62184` e `61189`, por exemplo) produzem duas `SpecIdentity`/`stable_key` distintas após conversão + normalização — nunca uma única entrada.
 
 ## Cenário 2 — Raw preservado antes de qualquer transformação
 
@@ -48,7 +58,7 @@ pytest tests/parser/test_capture_validation_outcomes.py
 pytest tests/unit/test_fingerprint_determinism.py
 ```
 
-**Esperado**: computar `spec_parts_hash` duas vezes sobre a mesma `ParsedSpecEntry` produz o mesmo valor; alterar a quantidade de uma peça produz um valor diferente; `image_hash` não muda quando apenas `parts` mudam, e vice-versa.
+**Esperado**: computar `spec_parts_hash` duas vezes sobre a mesma `AssembledSpecTree` (manifesto + `ParsedGroupDetail` — contracts/domain-contracts.md "Montagem da árvore agregada") produz o mesmo valor; alterar a quantidade de uma peça produz um valor diferente; `image_hash` não muda quando apenas `parts` mudam, e vice-versa.
 
 ## Cenário 5 — Equivalência exata nos pares de evidência
 
@@ -99,9 +109,11 @@ pytest tests/integration/test_checkpoint_resume.py
 ```
 
 **Esperado**:
-- Cenário A (nível spec entry): simular uma `CollectionRun` interrompida após processar 2 de 5 spec entries de fixture; retomar a run não duplica os 2 `SpecSnapshot` já `VALID`, e processa apenas as 3 restantes.
-- Cenário B (nível group, dentro de uma única spec entry): simular uma fixture de spec entry com múltiplos `Group`s onde a run é interrompida após alguns `Group`s alcançarem `CheckpointEntry.status == ACCEPTED`; retomar a run não reprocessa esses `Group`s (nenhum novo `CheckpointEntry`/evidência duplicado para eles) e continua a partir dos `Group`s `PENDING`/`IN_PROGRESS`/`REJECTED`; o `SpecSnapshot` final só é gerado como `VALID` após todos os `Group`s estarem `ACCEPTED`.
+- Cenário A (nível spec entry): simular uma `CollectionRun` interrompida após processar 2 de 5 spec entries de fixture (cada uma já com manifesto autoritativo capturado); retomar a run não duplica os 2 `SpecSnapshot` já `VALID`, e processa apenas as 3 restantes.
+- Cenário B (nível group, dentro de uma única spec entry): dado um `SpecGroupManifest` autoritativo listando N grupos, simular a run interrompida após alguns `Group`s alcançarem `CheckpointEntry.status == ACCEPTED`; retomar a run não reprocessa esses `Group`s (nenhum novo `CheckpointEntry`/evidência duplicado para eles) e continua a partir dos `(category_slug, group_id)` do manifesto ainda `PENDING`/`IN_PROGRESS`/`REJECTED`; o `SpecSnapshot` final só é gerado como `VALID` após todos os grupos **do manifesto** estarem `ACCEPTED`.
 - Cenário C (challenge não conclui group): simular um `Group` cuja captura de origem é classificada como `CHALLENGE`; verificar que o `CheckpointEntry` correspondente nunca atinge `status == ACCEPTED` (permanece `PENDING`/`REJECTED`), e que isso impede `collection_complete == True` para a spec entry até uma captura `ACCEPTED` suceder o challenge.
+- Cenário D (sem manifesto autoritativo): simular `CheckpointEntry` `ACCEPTED` para alguns grupos capturados diretamente, **sem** um `SpecGroupManifest` autoritativo correspondente; verificar que `collection_complete` permanece `False` e `finalize_spec_entry()` não produz snapshot `VALID` — captura parcial de detalhe nunca define sozinha o universo esperado (data-model.md §15/§17).
+- Cenário E (restart real do processo — data-model.md §13c, contracts/ports-contract.md "Replay / Reconstrução determinística"): persistir um `SpecGroupManifest` autoritativo; aceitar `Group A` e `Group B` (`CheckpointEntry.status == ACCEPTED`, cada um com seu `raw_capture_id`); **descartar toda representação em memória** (nenhuma referência a `ParsedGroupDetail`, à árvore agregada ou ao manifesto do passo anterior); instanciar novos repositórios/serviços (simulando um processo novo); chamar `finalize_spec_entry(spec_key, run_id)` a partir dessa nova instância. Esperado: `Group A` e `Group B` são reconstruídos exclusivamente a partir da persistência (`manifest_repo.get_authoritative()` + `checkpoint_repo.list_accepted()` + `capture_repo.get()` + `blob_store.read()` + `parse_group_detail()`); nenhum dos dois é recoletado; o `SpecSnapshot` resultante é `VALID`.
 
 ## Cenário 10 — Pipeline integrado (raw → parse → normalize → fingerprint → snapshot → equivalence)
 
@@ -111,7 +123,7 @@ pytest tests/integration/test_checkpoint_resume.py
 pytest tests/integration/test_pipeline_end_to_end.py
 ```
 
-**Esperado**: partindo de uma `RawCaptureInput` de fixture, o pipeline completo produz um `SpecSnapshot` `VALID`, fingerprints coerentes com `contracts/normalization-fingerprint-contracts.md`, e (quando aplicável, comparando com outra fixture do mesmo cluster) um resultado de equivalência coerente com `contracts/equivalence-contracts.md` — sem qualquer chamada de rede.
+**Esperado**: partindo de uma captura `MARKET_INDEX` (descoberta), uma `SPEC_NAVIGATION` (manifesto) e as capturas `GROUP_DETAIL` correspondentes a todos os grupos do manifesto, o pipeline completo produz um `SpecSnapshot` `VALID`, fingerprints coerentes com `contracts/normalization-fingerprint-contracts.md`, e (quando aplicável, comparando com outra fixture do mesmo cluster) um resultado de equivalência coerente com `contracts/equivalence-contracts.md` — sem qualquer chamada de rede.
 
 ## Cenário 11 — Idempotência de checkpoint/snapshot e atomicidade da finalização
 

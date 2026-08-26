@@ -17,6 +17,8 @@ Model (Amarok)
                                 └─ OemReference (projeção derivada — ver research.md §11)
 ```
 
+**Origem dos dados por nível de captura** (correção — research.md §16): `Model`/`Market` são constantes desta feature; `Spec Entry` (como candidato, antes de identidade confirmada) é descoberto via `DiscoveredSpecEntry` (§14, Nível A — market index); a enumeração de `Category`→`Group` esperados vem de `SpecGroupManifest` (§15, Nível B — spec navigation); o conteúdo de `Schema`→`Part` vem de `ParsedGroupDetail` (Nível C — group detail, ver `contracts/domain-contracts.md`), tipicamente um por `Group`.
+
 ---
 
 ## 1. `SpecIdentity`
@@ -124,11 +126,15 @@ Entrada adquirida externamente (browser-in-the-loop manual, nesta feature — DE
 
 ## 5. Resultado de validação de captura
 
-Ver `contracts/input-contracts.md` para o contrato completo. Resumo do tipo:
+Ver `contracts/input-contracts.md` §2 para o contrato completo. Resumo do tipo:
 
-`CaptureValidationResult = ACCEPTED | CHALLENGE | TRANSLATION_CONTAMINATED | INVALID | INCOMPLETE`
+```
+CaptureValidationResult:
+  primary_outcome: ACCEPTED | CHALLENGE | TRANSLATION_CONTAMINATED | INVALID | INCOMPLETE
+  evidence: dict   # todos os sinais detectados, não apenas o vencedor
+```
 
-Mutuamente exclusivos (research.md §13). Somente `ACCEPTED` segue para parsing.
+`primary_outcome` é determinístico por construção — quando múltiplos sinais coexistem, a precedência **DEC-003** (`spec.md` §Decisions, contracts/input-contracts.md §2) decide: `CHALLENGE > TRANSLATION_CONTAMINATED > INVALID > INCOMPLETE > ACCEPTED`. `evidence` sempre preserva todos os sinais detectados, mesmo os que não determinaram `primary_outcome`. Somente `primary_outcome == ACCEPTED` segue para parsing.
 
 ---
 
@@ -143,7 +149,7 @@ Mutuamente exclusivos (research.md §13). Somente `ACCEPTED` segue para parsing.
 | `parser_version` | `str` | sim | Ex.: `amayama-parser-v1`. |
 | `normalizer_version` | `str` | sim | Ex.: `amayama-normalizer-v1`. |
 | `fingerprint_version` | `str` | sim | Ex.: `amayama-fingerprint-v1`. |
-| `collection_complete` | `bool` | sim | Derivado do estado agregado dos `CheckpointEntry` (§11) daquela spec entry: `True` se e somente se todos os `Group` descobertos para a spec entry têm status `ACCEPTED`; `False` caso exista ao menos um `Group` `PENDING`/`IN_PROGRESS`/`REJECTED`. Checkpoint `ACCEPTED` em todos os grupos é precondição necessária, mas a avaliação de completude (o que conta como "todos os grupos esperados") é decisão de TASKS/implementação sobre como a descoberta de grupos é considerada encerrada para aquela spec entry. |
+| `collection_complete` | `bool` | sim | **Corrigido (research.md §17)**: `True` se e somente se (1) existe um `SpecGroupManifest` (§15) **autoritativo** para `(spec_key, run_id)`, e (2) todo `(category_slug, group_id)` presente nesse manifesto tem `CheckpointEntry` (§11) com status `ACCEPTED`, e (3) nenhum erro estrutural crítico invalida o manifesto. Sem manifesto autoritativo, `collection_complete` é sempre `False` — uma captura parcial de detalhe nunca define, sozinha, o universo esperado de grupos. |
 | `structure_hash` | `str` (sha256 hex) | sim | Ver `fingerprints`. |
 | `spec_parts_hash` | `str` (sha256 hex) | sim | Ver `fingerprints`. |
 | `schema_semantic_hash` | `str` (sha256 hex) | sim | Ver `fingerprints`. |
@@ -276,7 +282,7 @@ Unidade mínima de progresso retomável. **Chave única (constraint)**: `UNIQUE(
 | `category_slug` | `str` | sim | Usado como agrupamento/índice de `group_id` — evita colisão de `group_id` entre categorias distintas (consistente com a invariante de §2). Não é, por si só, uma unidade de status separada. |
 | `group_id` | `str` | sim | Preservado como string (zeros à esquerda) — mesma regra de §2. |
 | `status` | `enum {PENDING, IN_PROGRESS, ACCEPTED, REJECTED}` | sim | Ver regras de transição abaixo. |
-| `raw_capture_id` | `str \| None` | não | Referência ao `RawCapture` (§4) associado a esta tentativa. Como uma única captura de página tipicamente contém múltiplos `Group`s (ver seletores em `contracts/domain-contracts.md`), o mesmo `raw_capture_id` pode ser referenciado por múltiplos `CheckpointEntry` da mesma spec entry. |
+| `raw_capture_id` | `str \| None` | não | Referência ao `RawCapture` (§4) associado a esta tentativa. **Corrigido (research.md §16)**: uma captura de `GROUP_DETAIL` corresponde tipicamente a **um único** `Group` (evidência de URL `.../<spec>/<category_slug>/<group_id>`) — a relação 1:1 é a suposição central. O campo permanece `str` (não uma lista) para não impedir, no futuro, que uma captura agregue mais de um grupo, mas isso deixou de ser a suposição de design. |
 | `attempt_count` | `int` | sim | Incrementado a cada nova tentativa de processar este `Group` (inclusive revalidação deliberada). |
 | `last_attempt_at` | `datetime \| None` | não | |
 | `completed_at` | `datetime \| None` | não | Preenchido somente quando `status == ACCEPTED`. |
@@ -291,11 +297,13 @@ Unidade mínima de progresso retomável. **Chave única (constraint)**: `UNIQUE(
 
 **Invariantes**:
 - Um `Group` com `status == ACCEPTED` e persistido não precisa ser recoletado/reprocessado após uma interrupção (retomada consulta apenas `Group`s `PENDING`/`IN_PROGRESS`/`REJECTED`) — FR-012, SC-004.
-- `SpecSnapshot.collection_complete` (§6) só pode ser `True` quando todos os `Group`s descobertos para aquela spec entry estão `ACCEPTED`.
+- `SpecSnapshot.collection_complete` (§6) só pode ser `True` quando existe manifesto autoritativo (§15) para a spec entry **e** todos os `(category_slug, group_id)` nele listados estão `ACCEPTED`.
 - Raw já aceito permanece preservado independentemente do resultado de tentativas posteriores sobre o mesmo `Group` (Constitution §4).
 - **Idempotência real** (ver §13 para o mecanismo completo — content-addressing por si só é insuficiente, apenas deduplica bytes físicos): a chave única `(run_id, spec_key, category_slug, group_id)` combinada com upsert transacional garante que repetir a mesma operação de checkpoint nunca produz uma segunda linha para a mesma unidade de progresso nem uma transição concorrente/repetida indevida para `ACCEPTED`.
 
-**Rastreabilidade**: FR-008, FR-009, FR-012, SC-004, User Story 7, research.md §9.
+**Leitura para replay (fecha o gap de resume após restart)**: além do upsert, o repositório de `CheckpointEntry` DEVE suportar `list_accepted(run_id, spec_key) -> list[CheckpointEntry]`, retornando todos os `CheckpointEntry` com `status == ACCEPTED` para aquela spec entry naquela run. Combinado com `raw_capture_id` de cada entrada e os ports `RawCaptureRepository`/`RawBlobStore` (contracts/ports-contract.md "Replay / Reconstrução determinística"), isso é suficiente para reconstruir o conteúdo bruto de todos os grupos já aceitos **exclusivamente a partir do que está persistido** — nenhum `ParsedGroupDetail` precisa sobreviver em memória entre processos. Exemplo: `Group A` e `Group B` `ACCEPTED` antes de o processo encerrar; uma nova instância consegue recuperar ambos via `list_accepted()` + `capture_repo.get()` + `blob_store.read()`, sem recoletar nada.
+
+**Rastreabilidade**: FR-008, FR-009, FR-012, SC-004, User Story 7, research.md §9, §18.
 
 ---
 
@@ -359,32 +367,118 @@ SpecSnapshot.idempotency_key =
 - **Raw igual em momentos diferentes não implica mesmo snapshot**: por construção, o fingerprint usa `raw_capture_id` (observação), não `content_hash` (blob) — dois `RawBlob` idênticos capturados como duas `RawCapture` distintas (§4b) produzem `accepted_checkpoint_fingerprint` diferentes.
 - **Snapshot permanece imutável após criado**: `idempotency_key` é calculado uma única vez na criação; nenhuma atualização posterior o recalcula ou o reatribui (apenas o campo `state` transiciona — ver §6).
 
-### 13c. Atomicidade da finalização
+### 13c. Reconstrução determinística + atomicidade da finalização (corrigido)
 
-A transição final de uma spec entry para snapshot aceito é uma única transação de metadados:
+**Correção (revisão cirúrgica de TASKS, 2026-08-26)**: a formulação anterior recebia uma "árvore agregada" já pronta como parâmetro, sem nunca explicitar de onde ela viria após um restart do processo — nenhum `ParsedGroupDetail` sobrevive em memória entre processos por definição. `finalize_spec_entry()` não recebe mais uma árvore pronta: ela **reconstrói tudo a partir do que está persistido**, usando exclusivamente as leituras já definidas em §11 (`list_accepted`), §15 (`get_authoritative`) e `contracts/ports-contract.md` (`RawCaptureRepository.get()` + `RawBlobStore.read()`). Nenhum storage paralelo é introduzido.
+
+A montagem da árvore, normalização e cálculo de fingerprints acontecem **antes** de qualquer escrita — nada é inserido como `SpecSnapshot` até que a árvore e os fingerprints existam por completo:
 
 ```
 finalize_spec_entry(spec_key, run_id):
+
+  # Fase 1 — reconstrução (leitura pura, fora de qualquer transação de escrita)
+  1. manifest = manifest_repo.get_authoritative(spec_key, run_id)        # §15
+     IF manifest is None: RETURN (sem manifesto autoritativo, nada a finalizar)
+
+  2. accepted_entries = checkpoint_repo.list_accepted(run_id, spec_key)  # §11
+     collection_complete = todo (category_slug, group_id) de manifest está
+                            coberto por accepted_entries (ver §6)
+
+  3. group_details = {}
+     FOR cada CheckpointEntry em accepted_entries:
+       raw_content = reconstruct_raw_content(entry.raw_capture_id,       # contracts/ports-contract.md
+                                              capture_repo, blob_store)  # "Replay / Reconstrução determinística"
+       group_details[(entry.category_slug, entry.group_id)] =
+         parse_group_detail(raw_content, entry.category_slug, entry.group_id)
+     # nenhum ParsedGroupDetail precisa ter sobrevivido em memória — todos são
+     # recriados aqui, deterministicamente, a partir do raw persistido
+
+  4. assembled_tree = assemble_spec_tree(manifest, group_details)        # contracts/domain-contracts.md
+     normalized_tree = apply_normalization(assembled_tree)               # amayama-normalizer-v1
+     fingerprint_set = compute_fingerprint_set(normalized_tree)          # amayama-fingerprint-v1
+
+  5. accepted_checkpoint_fingerprint = multiset de (category_slug, group_id,
+       raw_capture_id) sobre accepted_entries — §13b
+     idempotency_key = SHA256("amayama:snapshot-idempotency:v1\0" +
+                               canonical_json({run_id, spec_key, accepted_checkpoint_fingerprint}))
+     state = VALID  se nenhum group_details[...] tem critical_error AND collection_complete == True
+     state = INCOMPLETE  se collection_complete == False (sem critical_error nos grupos já ACCEPTED)
+
+  # Fase 2 — transação única de metadados (única parte que toca o banco em modo escrita)
   BEGIN IMMEDIATE
-    1. Validar completude: consultar CheckpointEntry de (spec_key, run_id);
-       determinar collection_complete (ver §6) e computar idempotency_key (§13b)
-    2. IF já existe SpecSnapshot com este idempotency_key:
-         → finalização já ocorreu (retry idempotente); pular para o passo 5 sem inserir nada novo
+    6. IF já existe SpecSnapshot com este idempotency_key:
+         → retry idempotente — NÃO inserir novo snapshot; usar o existente nos passos 8-9
        ELSE:
-         → computar structure_hash/spec_parts_hash/schema_semantic_hash/image_hash
-         → INSERT novo SpecSnapshot (state = VALID ou INCOMPLETE conforme collection_complete)
-    3. IF um SpecSnapshot VALID/STALE anterior existia para spec_key:
-         → UPDATE seu state para SUPERSEDED
-         (somente quando o passo 2 efetivamente inseriu um snapshot novo)
-    4. UPDATE current_spec_state para apontar ao snapshot_id do passo 2
-       (o novo, ou o já existente em caso de retry idempotente)
-    5. Marcar a finalização desta spec entry como concluída nesta run
+         → INSERT novo SpecSnapshot (payload completo já calculado nos passos 4-5:
+           fingerprint_set, state, idempotency_key — nunca um snapshot parcial)
+         → persistir fingerprint_set associado (fingerprint_repo)
+    7. IF o passo 6 inseriu um snapshot novo E já existia um SpecSnapshot anterior VALID/STALE
+       para a mesma spec_identity:
+         → UPDATE seu state para SUPERSEDED (nunca sobrescrito — FR-029)
+    8. UPDATE current_spec_state para apontar ao snapshot_id do passo 6
+       (o novo, ou o já existente em caso de retry idempotente) — last-known-good
+    9. Marcar a finalização desta spec entry como concluída nesta run
   COMMIT
 ```
 
-Toda a sequência ocorre dentro de uma única transação SQLite — uma falha parcial (processo interrompido no meio) faz rollback completo: nenhum estado intermediário fica visível (nem snapshot duplicado, nem `current_spec_state` apontando para um snapshot inexistente, nem checkpoint "concluído" sem um snapshot consistente por trás). SQLite com escritor único (ou WAL com um único escritor por vez) é suficiente para este MVP — nenhum mecanismo de locking adicional é necessário; se acesso concorrente multi-processo se tornar um requisito futuro, ele é tratado na migração de `persistence/` (research.md §8), não neste desenho.
+**Falha na Fase 1** (reconstrução/parsing/fingerprint) nunca chega a abrir a transação de escrita — não há nada para fazer rollback, e nenhum estado persistido é tocado; a finalização simplesmente pode ser tentada de novo mais tarde (idempotente por construção, já que a Fase 1 é pura leitura + computação determinística). **Falha na Fase 2** (transação SQLite) faz rollback completo: nenhum estado intermediário fica visível (nem snapshot duplicado, nem `current_spec_state` apontando para um snapshot inexistente, nem checkpoint "concluído" sem um snapshot consistente por trás). SQLite com escritor único (ou WAL com um único escritor por vez) é suficiente para este MVP — nenhum mecanismo de locking adicional é necessário; se acesso concorrente multi-processo se tornar um requisito futuro, ele é tratado na migração de `persistence/` (research.md §8), não neste desenho.
 
 **Rastreabilidade**: FR-008, FR-009, FR-012, FR-026, FR-029, SC-004, SC-008.
+
+---
+
+## 14. `DiscoveredSpecEntry` (Nível A — market/spec index)
+
+**Correção (research.md §16)**: fecha FR-001, que não tinha implementação explícita antes desta revisão.
+
+| Campo | Tipo | Obrigatório | Notas |
+|---|---|---|---|
+| `market` | `str` | sim | Constante `"AMA-BR"` nesta feature. |
+| `model_code` | `str` | sim | Não é único isoladamente (mesma regra de §1). |
+| `amayama_catalog_id` | `str` | sim | Presente quando comprovado pela página de índice. |
+| `production_period_raw` | `str \| None` | não | Texto verbatim; pode ser open-ended. |
+| `production_start` | `date \| None` | não | Melhor esforço. |
+| `production_end` | `date \| None` | não | `None` também representa produção em andamento. |
+| `grade` | `str \| None` | não | Somente quando comprovado. |
+| `configuration` | `str \| None` | não | Somente quando comprovado. |
+| `source_url` | `str` | sim | URL da página de navegação da spec entry (Nível B). |
+| `source_capture_id` | `str` | sim | `RawCapture.capture_id` da captura de `MARKET_INDEX` que originou esta entrada. |
+
+**Invariantes**:
+- `model_code` isolado nunca identifica uma entrada (mesma regra de FR-003).
+- Campos opcionais ausentes na página de índice não são erro.
+- `DiscoveredSpecEntry` é convertida em `SpecIdentity` (§1) completando `source`/`manufacturer`/`vehicle_model` (constantes desta feature) — a conversão não inventa nenhum campo não presente na descoberta.
+
+**Rastreabilidade**: FR-001, FR-003, FR-004, FR-005.
+
+---
+
+## 15. `SpecGroupManifest` (Nível B — manifesto autoritativo de groups)
+
+**Correção (research.md §17)**: fecha o gap de "quais são todos os `Group`s esperados" que deixava `collection_complete` (§6) subdefinido.
+
+| Campo | Tipo | Obrigatório | Notas |
+|---|---|---|---|
+| `spec_key` | `str` | sim | `stable_key` (§1) da spec entry. |
+| `source_capture_id` | `str` | sim | `RawCapture.capture_id` da captura de `SPEC_NAVIGATION` que originou o manifesto. |
+| `discovered_at` | `datetime` | sim | |
+| `categories` | `list[ManifestCategory]` | sim | Cada `ManifestCategory`: `{category_slug: str, groups: list[ManifestGroupRef]}`; cada `ManifestGroupRef`: `{group_id: str, source_url: str}` (URL da página de `GROUP_DETAIL`). |
+| `manifest_complete` | `bool` | sim | `True` somente se a enumeração da página de navegação foi concluída sem truncamento/erro. |
+| `validation_evidence` | `dict` | não | Evidência de auditoria da extração (ex.: contagem de categorias/grupos encontrados). |
+
+**Autoridade do manifesto** — um `SpecGroupManifest` só é autoritativo para uma coleta `(spec_key, run_id)` quando **todas** as condições abaixo são verdadeiras:
+1. a `RawCapture` de origem (`source_capture_id`) tem outcome `ACCEPTED` (contracts/input-contracts.md §2);
+2. o parser de Nível B concluiu sem `critical_error` estrutural;
+3. `manifest_complete == True`;
+4. nenhum `(category_slug, group_id)` foi silenciosamente deduplicado — um par duplicado é `critical_error` (mesma invariante de §2, aplicada em tempo de parsing do manifesto).
+
+**Invariantes**:
+- `collection_complete` (§6) depende estritamente de existir um manifesto autoritativo — nunca é inferido a partir apenas dos `CheckpointEntry` já observados.
+- Um manifesto não-autoritativo (qualquer condição acima falha) não pode ser usado para decidir completude — a spec entry permanece `collection_complete = False` até um manifesto autoritativo existir.
+
+**Leitura para replay**: o repositório de `SpecGroupManifest` DEVE suportar `get_authoritative(spec_key, run_id) -> SpecGroupManifest | None`, aplicando as 4 condições de autoridade acima e retornando `None` quando alguma falha. É esse método — não uma referência em memória — que `finalize_spec_entry()` (contracts/snapshot-contract.md) consulta para obter o universo esperado de grupos, inclusive após um restart do processo.
+
+**Rastreabilidade**: FR-001, FR-002, FR-012, FR-026.
 
 ---
 
@@ -393,6 +487,8 @@ Toda a sequência ocorre dentro de uma única transação SQLite — uma falha p
 | Entidade | FRs relacionados |
 |---|---|
 | `SpecIdentity` | FR-002 a FR-007, FR-021 |
+| `DiscoveredSpecEntry` (§14) | FR-001, FR-003 a FR-005 |
+| `SpecGroupManifest` (§15) | FR-001, FR-002, FR-012, FR-026 |
 | `RawBlob` / `RawCapture` | FR-008, FR-009, FR-034 |
 | Validação de captura | FR-010, FR-011 |
 | `Part` | FR-013, FR-014 |

@@ -8,6 +8,10 @@
 
 **Correção técnica final aplicada (2026-08-26)**: fechada a garantia de idempotência de checkpoint/resume, que dependia insuficientemente do content-addressing do raw. Adicionados: chave única `(run_id, spec_key, category_slug, group_id)` + upsert transacional em `CheckpointEntry`; distinção explícita entre `RawBlob` (conteúdo físico, deduplicável) e `RawCapture`/Observation (evento de coleta, identidade própria, nunca colapsada); `idempotency_key` determinístico em `SpecSnapshot`; transação única de finalização. Ver `research.md` §15 e `data-model.md` §4, §13.
 
+**Correção de revisão de TASKS aplicada (2026-08-26)**: REQUEST_CHANGES da coordenação SDD sobre `tasks.md` revelou que FR-001 (enumeração) não tinha implementação, que `parse_spec_entry()` concentrava indevidamente três níveis distintos de parsing, que `collection_complete` não tinha fonte autoritativa do universo esperado de grupos, e que a Phase 3 tinha uma dependência oculta sobre a Phase 10. Corrigido com: três parsers (`parse_market_spec_index`/`parse_spec_group_manifest`/`parse_group_detail`, roteados por `RawCaptureInput.capture_kind`), a entidade `SpecGroupManifest` como fonte autoritativa de grupos esperados, a correção da granularidade real de captura (uma `RawCapture` de `GROUP_DETAIL` corresponde tipicamente a um `Group`, não a uma spec entry inteira), e os *ports* `RawBlobStore`/`RawCaptureRepository` isolando a Phase 3 da Phase 10. Ver `research.md` §16–§19, `data-model.md` §14–§15, `contracts/domain-contracts.md`, `contracts/ports-contract.md`. Uma pendência foi reportada ao PO sem resolução por informed guess: a precedência de outcomes de validação quando múltiplos sinais coexistem — ver `research.md` §20.
+
+**Correção final aplicada (2026-08-26) — DEC-003**: a pendência acima foi resolvida pelo PO. `spec.md` §Decisions registra **DEC-003** — precedência determinística `CHALLENGE > TRANSLATION_CONTAMINATED > INVALID > INCOMPLETE > ACCEPTED` para `CaptureValidationResult.primary_outcome`, com `evidence` sempre preservando todos os sinais detectados. `tasks.md` foi atualizado: a task antes bloqueada (precedência de sinais simultâneos) foi desbloqueada e decomposta em teste + implementação. Ver `research.md` §20, `contracts/input-contracts.md` §2.
+
 **Governança aplicada**: `.specify/memory/constitution.md`, `docs/sdd/EXECUTION_POLICY.md`, `AGENTS.md`, `CLAUDE.md`. Esta PLAN aplica a precedência normativa do projeto sobre qualquer default genérico do Spec Kit (`docs/sdd/EXECUTION_POLICY.md` §"Hierarquia de autoridade") — em particular, nenhuma "informed guess" foi feita para decisões semânticas; decisões técnicas (HOW) foram tomadas e justificadas em [research.md](./research.md).
 
 ## Summary
@@ -68,12 +72,13 @@ specs/001-amarok-ama-br-ingestion/
 ├── data-model.md                             # Phase 1 — entidades e invariantes
 ├── quickstart.md                             # Phase 1 — guia de validação
 ├── contracts/
-│   ├── input-contracts.md                    # RawCaptureInput + CaptureValidationResult
-│   ├── domain-contracts.md                   # seletores v1 + resultado de parsing
+│   ├── input-contracts.md                    # RawCaptureInput (capture_kind) + CaptureValidationResult
+│   ├── domain-contracts.md                   # 3 níveis de parsing + seletores v1 + assemble_spec_tree()
+│   ├── ports-contract.md                     # RawBlobStore / RawCaptureRepository (dependency inversion)
 │   ├── normalization-fingerprint-contracts.md
 │   ├── equivalence-contracts.md
 │   ├── image-contract.md
-│   ├── snapshot-contract.md
+│   ├── snapshot-contract.md                  # collection_complete via SpecGroupManifest autoritativo
 │   └── export-boundary-contract.md
 └── tasks.md                                  # Phase 2 — NÃO criado por este PLAN
 ```
@@ -82,9 +87,9 @@ specs/001-amarok-ama-br-ingestion/
 
 ```text
 src/amayama_scraper/
-├── ingestion/          # RawCaptureInput → RawBlob + RawCapture/Observation (contracts/input-contracts.md §1, data-model.md §4)
+├── ingestion/          # RawCaptureInput (capture_kind: MARKET_INDEX/SPEC_NAVIGATION/GROUP_DETAIL) → RawBlob + RawCapture/Observation via ports (contracts/input-contracts.md §1, contracts/ports-contract.md, data-model.md §4)
 ├── validation/         # CaptureValidationResult (contracts/input-contracts.md §2)
-├── parsing/             # HTML aceito → ParsedSpecEntry (contracts/domain-contracts.md), parser v1 com seletores fixos
+├── parsing/             # três parsers por nível (market_index/spec_group_manifest/group_detail) + assemble_spec_tree() (contracts/domain-contracts.md), seletores v1 fixos no nível de group detail
 ├── domain/               # SpecIdentity, Category, Group, Schema, Part, OemReference (data-model.md §1-3)
 ├── normalization/     # normalizer v1 (contracts/normalization-fingerprint-contracts.md)
 ├── fingerprints/        # part/group/category/spec_parts_hash, schema_semantic_hash, image_hash, structure_hash

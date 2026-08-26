@@ -10,6 +10,9 @@
 - Decisão do Product Owner sobre o mecanismo de aquisição de HTML bruto consolidada (DEC-001) — ver seção "Decisions" abaixo.
 - Decisão do Product Owner sobre persistência interna do MVP consolidada (DEC-002), corrigindo a contradição entre a formulação anterior de "Out of Scope"/"Assumptions" sobre banco de dados e o PLAN aprovado. Nenhum requisito funcional foi alterado por estas emendas — apenas o registro de decisões técnicas/de escopo já aprovadas pelo PO.
 
+**Amendment (2026-08-26)**:
+- Decisão do Product Owner sobre a precedência de outcomes de validação de captura consolidada (DEC-003) — ver seção "Decisions" abaixo. Fecha uma pendência levantada na revisão de TASKS (Issue #6) sem que nenhum requisito funcional tenha sido alterado — a decisão especifica comportamento já pertencente à validação de captura (FR-010, FR-011).
+
 **Input**: GitHub Issue #3 — "SPECIFY — MVP de ingestão Amayama Amarok AMA-BR". Especificar um MVP vertical de ingestão do catálogo Volkswagen Amarok no mercado `AMA BR` da Amayama: descoberta/enumeração de spec entries, preservação de identidade (market, model_code, amayama_catalog_id, período de produção, source_url), preservação de raw data e proveniência, normalização e fingerprints versionados, equivalência exata e deduplicação segura de peças, fallback de imagem controlado, snapshots auditáveis e revalidação incremental, e coleta retomável/checkpointed — em conformidade com `.specify/memory/constitution.md` e `docs/sdd/EXECUTION_POLICY.md`.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -230,6 +233,23 @@ Como operador de coleta, preciso interromper e retomar uma execução de descobe
   - integração de persistência com Hubbi.
 
   A implementação da persistência continua sujeita aos gates PLAN → TASKS → PO approval. SQLite é uma decisão técnica aprovada para este PLAN, não um requisito funcional permanente do produto.
+
+- **DEC-003 — Precedência dos outcomes de validação (aprovado pelo PO em 2026-08-26)**: quando uma captura dispara mais de um sinal de rejeição simultaneamente, a classificação (`CaptureValidationResult.primary_outcome`) segue a ordem normativa, da mais alta para a mais baixa precedência:
+  1. `CHALLENGE`
+  2. `TRANSLATION_CONTAMINATED`
+  3. `INVALID`
+  4. `INCOMPLETE`
+  5. `ACCEPTED`
+
+  Regras associadas, também aprovadas:
+  - `CHALLENGE` tem precedência máxima porque exige human-in-the-loop e nunca pode ser mascarado por outro problema (FR-011).
+  - `TRANSLATION_CONTAMINATED` prevalece sobre `INVALID`/`INCOMPLETE` porque o DOM deixa de ser source truth confiável.
+  - `INVALID` prevalece sobre `INCOMPLETE` quando a estrutura é incompatível com o parser.
+  - `INCOMPLETE` só se aplica quando a captura é estruturalmente válida, porém parcial.
+  - `ACCEPTED` somente quando nenhum outcome anterior se aplica.
+  - Todos os sinais detectados permanecem preservados em `evidence` (contracts/input-contracts.md §2), mesmo quando apenas um é escolhido como `primary_outcome` — a precedência decide qual sinal governa o roteamento, nunca apaga os demais.
+
+  Esta decisão fecha a pendência reportada na revisão de TASKS (Issue #6, `research.md` §20) e não altera nenhum FR — especifica comportamento já pertencente à validação de captura (FR-010, FR-011).
 
 ## Assumptions
 
