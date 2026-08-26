@@ -6,7 +6,9 @@
 
 **Status**: Draft
 
-**Amendment (2026-08-25)**: Decisão do Product Owner sobre o mecanismo de aquisição de HTML bruto consolidada — ver seção "Decisions" abaixo. Nenhuma outra parte desta especificação foi alterada por esta emenda.
+**Amendments (2026-08-25)**:
+- Decisão do Product Owner sobre o mecanismo de aquisição de HTML bruto consolidada (DEC-001) — ver seção "Decisions" abaixo.
+- Decisão do Product Owner sobre persistência interna do MVP consolidada (DEC-002), corrigindo a contradição entre a formulação anterior de "Out of Scope"/"Assumptions" sobre banco de dados e o PLAN aprovado. Nenhum requisito funcional foi alterado por estas emendas — apenas o registro de decisões técnicas/de escopo já aprovadas pelo PO.
 
 **Input**: GitHub Issue #3 — "SPECIFY — MVP de ingestão Amayama Amarok AMA-BR". Especificar um MVP vertical de ingestão do catálogo Volkswagen Amarok no mercado `AMA BR` da Amayama: descoberta/enumeração de spec entries, preservação de identidade (market, model_code, amayama_catalog_id, período de produção, source_url), preservação de raw data e proveniência, normalização e fingerprints versionados, equivalência exata e deduplicação segura de peças, fallback de imagem controlado, snapshots auditáveis e revalidação incremental, e coleta retomável/checkpointed — em conformidade com `.specify/memory/constitution.md` e `docs/sdd/EXECUTION_POLICY.md`.
 
@@ -218,11 +220,22 @@ Como operador de coleta, preciso interromper e retomar uma execução de descobe
   - Human-in-the-loop continua permitido e é o único caminho aceito diante de challenge (FR-011).
   - Nenhum bypass de CAPTCHA/Cloudflare é permitido, sob nenhuma circunstância (FR-010, FR-011).
 
+- **DEC-002 — Persistência interna do MVP (aprovado pelo PO em 2026-08-25)**: A feature pode utilizar persistência concreta interna para cumprir requisitos de raw auditável, snapshots, checkpoint/resume, histórico e last-known-good (FR-008, FR-009, FR-012, FR-026, FR-029). Esta decisão corrige explicitamente a formulação anterior de "Out of Scope"/"Assumptions", que não deve mais ser reinterpretada. Escolhas técnicas autorizadas no PLAN:
+  - SQLite para metadados/estado;
+  - filesystem content-addressed para raw.
+
+  Continuam fora de escopo:
+  - banco externo/produtivo;
+  - infraestrutura de produção;
+  - integração de persistência com Hubbi.
+
+  A implementação da persistência continua sujeita aos gates PLAN → TASKS → PO approval. SQLite é uma decisão técnica aprovada para este PLAN, não um requisito funcional permanente do produto.
+
 ## Assumptions
 
 - O "operador" desta feature é um usuário interno da equipe de coleta (Hubbi/PO/Claude/Codex/Antigravity), não um usuário final do produto Hubbi — não há interface gráfica nem API pública nesta feature.
-- A saída desta feature é um modelo de domínio interno (representação estruturada), não persistida em um banco de dados concreto nem exposta via CLI ou API — ambos explicitamente fora de escopo desta feature.
-- A granularidade exata do checkpoint (por spec entry, por página, ou outra unidade) e os limiares concretos de política de freshness (quando um snapshot se torna `STALE`) são decisões de implementação a serem definidas em PLAN/TASKS; esta especificação exige apenas que a capacidade de retomada e a configurabilidade da política de freshness existam.
+- A saída desta feature é um modelo de domínio interno (representação estruturada), não exposta via CLI ou API — ambos explicitamente fora de escopo desta feature. Persistência interna concreta (ver DEC-002) é permitida e necessária para cumprir requisitos de raw auditável, snapshots e checkpoint/resume; o que permanece fora de escopo é um banco de dados externo/produtivo e sua integração com sistemas externos (ver "Out of Scope").
+- A granularidade exata dos limiares concretos de política de freshness (quando um snapshot se torna `STALE`) é decisão de implementação a ser definida em TASKS; esta especificação exige apenas que a capacidade de retomada e a configurabilidade da política de freshness existam. (A granularidade de checkpoint em si é definida no PLAN — ver `plan.md`/`data-model.md` — como hierárquica, com progresso rastreável por group.)
 - `AMA BR` é o identificador de mercado já validado por evidência externa consolidada (conforme Constitution §2), usado como dado de entrada desta feature — sua descoberta/validação não faz parte do escopo desta feature.
 - Os três pares de evidência documentados (`2HBC3X`↔`S1BC3X`, `S6BC74`↔`S7BC74`, `S7BC8A-62184`↔`AGDC8A-62169`) são usados como casos de referência para validar o comportamento de equivalência; eles não implicam que todo par de spec entries do Amarok será equivalente, nem que 2H/S1/S6/S7/AGD formam uma sequência de gerações.
 
@@ -233,7 +246,8 @@ Como operador de coleta, preciso interromper e retomar uma execução de descobe
 - Integração produtiva com o ecossistema Hubbi (apenas uma saída interna adaptável é exigida, sem acoplamento).
 - Bypass automatizado de Cloudflare/CAPTCHA sob qualquer circunstância.
 - Implementação do transporte de automação (Selenium/CDP).
-- Escolha ou implementação de um banco de dados concreto.
+- Banco de dados externo/produtivo e infraestrutura de banco de dados de produção (persistência interna concreta para o MVP é tratada por DEC-002).
+- Integração de persistência com sistemas externos/Hubbi.
 - Infraestrutura de produção (deploy, orquestração, monitoramento operacional).
 - Interface gráfica.
 - API pública.
