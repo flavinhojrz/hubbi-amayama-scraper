@@ -332,6 +332,38 @@ Falha explícita (tratada como drift estrutural, nunca inferência silenciosa) q
 
 ---
 
+## 21. Seletores Nível A/B comprovados contra evidência real (2026-08-26) — fecha o blocker T073–T078
+
+**Status**: o gap de pesquisa registrado em §16 (Nível A) e no antigo texto deste documento (Nível B) — "estrutura ainda não verificada contra fixture real" — está fechado. O PO forneceu duas capturas HTML reais, feitas manualmente via browser-in-the-loop (DEC-001, nenhuma automação):
+
+1. `https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br` (índice do mercado, Nível A) — 242 `.epcVariations__row` reais.
+2. `https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s1bc3x-56087` (navegação de uma spec entry, Nível B) — 10 categorias reais, 108 group cards reais.
+
+Ambas as capturas foram inspecionadas programaticamente (BeautifulSoup/lxml) antes de qualquer seletor ser escrito, confirmando estruturalmente cada um dos pontos abaixo — nenhum seletor foi assumido sem essa verificação.
+
+**Nível A — Market Index**:
+
+- Container `.epcVariations`; cada entry é `.epcVariations__row` com exatamente 3 `<td>` (confirmado nas 242 rows reais, sem exceção).
+- 1ª `<td>`: `<a href="...">MODEL_CODE</a>` — `model_code` do texto do link (nunca do slug da URL); `source_url` do `href`.
+- `amayama_catalog_id`: sufixo numérico final do último segmento de path da URL (regex `-(\d+)$`), nunca uma decodificação de `model_code`. Confirmado com o par real `S7BC8A` → catalog `62184` (período `2022.06 - ...`) vs. catalog `61189` (período `2019.08 - 2022.05`) — mesmo `model_code`, `SpecIdentity` distinta, exatamente o caso de regressão exigido.
+- 2ª `<td>`: `production_period_raw`, formato `YYYY.MM - YYYY.MM`; `"..."` como término (29 das 242 rows reais) mapeado para `production_end=None` (em produção), nunca uma data inventada.
+- 3ª `<td>`: `span.info-hint-new` com o texto do grade (presente em 100% das rows reais capturadas; ausência tratada como não-erro, não como violação de invariante).
+- `market`: **não** derivado de `grade`/`model_code` — validado pela identidade estrutural da própria página, via `.breadcrumbs__last-item` (breadcrumb real: `Genuine Online Car Parts Catalogue > Volkswagen > Amarok > AMA BR`).
+- `configuration`: nenhuma fonte estrutural comprovada na captura real — permanece sempre `None` (nunca derivado de `grade`, conforme instrução explícita do PO).
+
+**Nível B — Spec Group Manifest**:
+
+- Raiz `.epcVariation__details` — confirmado como a mesma classe raiz usada pela página de Nível C (o site usa o mesmo template de "variation" para a navegação e para o detalhe filtrado por group; `epcSchema__*` — conteúdo real de Nível C — não aparece na captura de navegação, confirmando que são páginas/seções distintas apesar da raiz compartilhada).
+- Navegação de categorias: `.epcVariation__schemaGroups > a.epcVariation__schemaGroup`. O link com `data-id=""` (texto `"All"`) é estruturalmente distinto (não representa nenhuma categoria de domínio) e é sempre ignorado — confirmado presente na captura real, sempre como o primeiro link.
+- Groups: `.epcVariation__schemas .epcVariation__schema[data-id]`. Confirmado programaticamente contra a captura real: 108 cards, `data-id` de cada card == último segmento do `href` de `.epcVariation__schema-name a[href]` em **100%** dos casos (0 divergências), `category_slug` (penúltimo segmento do mesmo `href`) presente entre as 10 categorias declaradas na navegação em **100%** dos casos, e as 108 chaves `(category_slug, group_id)` são todas distintas (0 duplicatas). As duas invariantes de `critical_error` (`data-id == segmento da URL`, `category_slug declarado na navegação`) são portanto verificações defensivas para desvio futuro, não uma condição já observada na evidência atual.
+- **`manifest_complete` — limitação de observabilidade** (resolução da pendência registrada em tasks.md T077, dentro da autoridade já delegada pelo PO para este caso específico): a captura é uma página estática única, sem nenhum marcador de paginação/lazy-load/contagem total observável (`grep` por `pagination|load-more|total|data-count` não encontrou nenhum sinal candidato). Não existe, portanto, forma de distinguir estruturalmente "este manifesto tem poucos groups porque a spec realmente tem poucos" de "este manifesto foi truncado por um carregamento incompleto". `manifest_complete` em v1 usa o único sinal genuinamente observável: `.epcVariation__schemas` presente mas vazio (zero cards) apesar de a navegação declarar categorias → `False`. Uma truncagem parcial (ex.: 40 de 108 cards presentes) **não é detectável** com esta evidência e fica registrada aqui como gap conhecido, não resolvida por uma cardinalidade inventada — se um sinal de paginação/contagem real for capturado no futuro, esta seção deve ser revisada.
+
+**242 rows / 10 categorias / 108 groups são evidência desta captura específica, não cardinalidade universal do catálogo** — o parser não hardcoda nenhum desses números.
+
+**Rationale**: fecha T073–T078 (tasks.md) com seletores comprovados contra evidência real, mantendo a disciplina de nunca inventar CSS selector sem fixture — a mesma disciplina já aplicada a `category_slug`/`group_id` (§19) e ao restante do parsing v1.
+
+---
+
 ## 20. Precedência de outcomes de validação quando sinais coexistem — FECHADA POR DEC-003
 
 **Status**: **RESOLVIDA.** Esta seção documentava uma lacuna encontrada durante a primeira revisão de TASKS, reportada ao PO sem informed guess. O PO aprovou **DEC-003** em 2026-08-26 (`spec.md` §Decisions), fechando a lacuna. Esta seção permanece como registro histórico do problema e da decisão tomada — a normativa vigente é `spec.md` DEC-003 e `contracts/input-contracts.md` §2.
