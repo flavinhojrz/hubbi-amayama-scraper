@@ -251,6 +251,24 @@ Como operador de coleta, preciso interromper e retomar uma execução de descobe
 
   Esta decisão fecha a pendência reportada na revisão de TASKS (Issue #6, `research.md` §20) e não altera nenhum FR — especifica comportamento já pertencente à validação de captura (FR-010, FR-011).
 
+- **DEC-004 — Amostragem de evidência de regressão para T245–T249 (aprovado pelo PO em 2026-08-27)**: a redação original de T245–T248 exigia materializar todos os group-details reais dos catálogos controlados. O PO alterou essa estratégia. Regras aprovadas:
+  - manifests reais completos (nível SPEC_NAVIGATION) continuam obrigatórios para todas as specs controladas em T245–T248 — nenhuma exceção;
+  - group-details permanentes no repositório passam a ser uma amostra pequena, real e representativa (não é mais exigida a materialização de todos os group-details de cada spec);
+  - cada teste pode afirmar `EXACT` somente sobre a evidência efetivamente materializada — nunca extrapolada para o EPC inteiro;
+  - a amostra não deve ser apresentada como prova isolada de equivalência de todo o catálogo;
+  - evidências históricas de comparação integral podem continuar documentadas como pesquisa, mas não devem ser simuladas por fixtures artificiais;
+  - nenhuma lógica de produção pode conter hardcode de model codes, catalog IDs ou pares específicos — os códigos de catálogo aparecem somente como dados de teste/regressão;
+  - nenhuma automação de bypass de CAPTCHA/Cloudflare entra na feature; aquisição de evidência real permanece browser-assisted/human-in-the-loop (DEC-001).
+
+  **Clarificação pontual da T248 (mesma aprovação, 2026-08-27)**: a finalidade de T248 é provar que `model_code` isolado nunca é identidade suficiente (Constitution §2, FR-003). Como nenhum manifest ou group-detail real existia para `S7BC8A-61189` em nenhum ponto do workspace no momento da implementação (busca exaustiva confirmada, incluindo histórico de git), T248 foi implementada exclusivamente sobre a evidência MARKET_INDEX real já aprovada (DEC-001) em `tests/fixtures/market_index/same_model_code_diff_catalog.html`, exercitando `parse_market_spec_index()` → `DiscoveredSpecEntry` → `SpecIdentity.stable_key()`. Esta é uma mudança controlada em relação à redação literal anterior de T248 (que mencionava "manifests"): a propriedade sob teste é identidade de catálogo, não equivalência semântica de peças, e a evidência MARKET_INDEX é suficiente e mais diretamente alinhada à regra validada. O manifest real de `S7BC8A-61189`, materializado posteriormente nesta mesma sessão, permanece apenas como evidência complementar/documental — não altera a implementação da T248.
+
+  **Clarificação de critério de aceite — SAMPLE-LEVEL EXACT vs. WHOLE-SPEC EXACT (mesma aprovação, 2026-08-27, segunda rodada)**: com os 7 manifests reais materializados, ficou confirmado que `compute_collection_complete()` exige TODO `(category, group)` do manifesto real (108 ou 99, conforme a spec) como `ACCEPTED` para que `collection_complete=True`/`state=VALID` — não existe, nem deve ser criado, um modo parcial/scoped no core. Portanto:
+  - T245–T247 provam exclusivamente **SAMPLE-LEVEL EXACT**: igualdade de fingerprints reais (`part_fingerprint`/`group_fingerprint`/`category_fingerprint`, via `parse_spec_group_manifest()`/`parse_group_detail()` + normalização real) sobre a amostra efetivamente materializada — nunca via `SpecSnapshot`/`evaluate_equivalence()`, nunca via `SpecSnapshot` fabricado/parcial;
+  - **WHOLE-SPEC EXACT** (i.e. `evaluate_equivalence().parts_relation == EXACT` sobre `SpecSnapshot`s reais) continua exigindo `collection_complete=True` — coleta real de 100% dos grupos do manifesto — e não é reivindicada por T245–T247;
+  - uma spec com apenas a amostra coletada produzir `state=INCOMPLETE`/`parts_relation=UNKNOWN`, caso o pipeline completo fosse executado, continua sendo o comportamento correto e não foi alterado;
+  - `compute_collection_complete()`, `finalize_spec_entry()` e `evaluate_equivalence()` permanecem intocados;
+  - adicionalmente, páginas reais completas (não trimadas) — os 7 manifests e as páginas de group-detail desta amostra — disparam um falso positivo já documentado no detector de `CHALLENGE` (`validation/detectors/challenge.py`, marcador genérico `g-recaptcha` presente em um widget de cadastro global de toda página real da Amayama, não relacionado a challenge algum). Este é um defeito real, separado, registrado como follow-up em `tests/regression/README.md` — não corrigido nesta fase, e T245–T247 não usam `process_capture()`/`classify_capture()` (não é bypass: essas tasks simplesmente não passam por ali, pois SAMPLE-LEVEL EXACT não depende desse caminho).
+
 ## Assumptions
 
 - O "operador" desta feature é um usuário interno da equipe de coleta (Hubbi/PO/Claude/Codex/Antigravity), não um usuário final do produto Hubbi — não há interface gráfica nem API pública nesta feature.
