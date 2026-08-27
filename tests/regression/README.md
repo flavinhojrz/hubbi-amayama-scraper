@@ -62,42 +62,35 @@ snapshots legitimately yields `comparison_valid=False` /
 of the unmodified pipeline and is not something these tests route around,
 mask, or reinterpret.
 
-## Known follow-up (documented, not fixed in this phase)
+## Resolved follow-up — Issue #8 (g-recaptcha false positive)
 
 Full, untrimmed real Amayama pages (the manifests and group-detail pages
-materialized for T245–T247) trip `validation/detectors/challenge.py`'s
+materialized for T245–T247) used to trip `validation/detectors/challenge.py`'s
 `CHALLENGE` detector as a **false positive**: Amayama's real page template
 embeds a hidden Sign-Up/Restore-password modal on every page (not just
 challenge pages), which contains a `<div class="g-recaptcha">` widget
-unrelated to any actual bot challenge. `_ID_OR_CLASS_MARKERS` includes
-`"g-recaptcha"`, so `classify_capture()` marks these genuinely valid pages
-as `CHALLENGE`. Confirmed by direct inspection: the same pages parse with
-zero `critical_error` and all real structural markers present via
-`parse_spec_group_manifest()`/`parse_group_detail()`.
+inside `#registration-form-container`/`#restore-form-container`, unrelated
+to any actual bot challenge. The original `_ID_OR_CLASS_MARKERS` substring
+check flagged `"g-recaptcha"` unconditionally, so `classify_capture()`
+misclassified these genuinely valid pages as `CHALLENGE`.
 
-This is a real, separate defect in the detector's precision (it was never
-exposed before because every previously-committed real-derived fixture in
-this project was trimmed/minimized, which incidentally stripped this
-site-wide boilerplate out). It is explicitly **out of scope for Phase 16**:
+This was fixed under Issue #8 (PO-approved scope, separate from Phase 16):
+`detect_challenge()` now locates `.g-recaptcha` elements via the DOM
+(BeautifulSoup) instead of a raw substring, and ignores only the ones whose
+ancestor is `#registration-form-container` or `#restore-form-container`; a
+`.g-recaptcha` anywhere else still counts as a challenge signal exactly as
+before. `classify.py`, `finalize_spec_entry()`, `compute_collection_complete()`,
+and `evaluate_equivalence()` were not touched. Regression coverage:
+`tests/parser/test_challenge_detection.py` (real `2hbc3x` manifest and
+`engine/100` page now classify as `ACCEPTED`, not `CHALLENGE`; a minimal
+`.g-recaptcha` outside both containers is still detected; the existing
+`challenge_cloudflare.html` case is unaffected).
 
-- `validation/detectors/challenge.py` is not modified here — challenge
-  detection is safety-critical (Constitution §5, FR-010/FR-011) and any
-  change to it needs its own PLAN/TASKS gate, not a Phase 16 side effect;
-- the real fixture HTML is not edited to remove the recaptcha snippet —
-  fixtures stay byte-for-byte as captured;
-- T245–T247 do not route around this by calling `process_capture()`/
-  `classify_capture()` with a bypass, nor by hand-saving a manifest or
-  hand-accepting a checkpoint to dodge the classifier. They simply never
-  call `process_capture()`/`classify_capture()`/`finalize_spec_entry()` at
-  all — SAMPLE-LEVEL EXACT does not require them (see above).
-
-Follow-up: a future feature/task should tighten
-`_ID_OR_CLASS_MARKERS`/`detect_challenge()` (e.g. require the marker to
-appear outside an unrelated site-wide auth-modal container, or require
-corroborating title/text signals) so real, complete Amayama pages are no
-longer misclassified. Until then, `process_capture()` on a *full* untrimmed
-real Amayama capture will misclassify it as `CHALLENGE` — this affects
-evidence acquisition/ingestion generally, not just these tests.
+T245–T247 still do not depend on this fix — they never called
+`process_capture()`/`classify_capture()`/`finalize_spec_entry()` in the
+first place (SAMPLE-LEVEL EXACT does not require them, see above); the fix
+matters for future evidence acquisition/ingestion generally, not for these
+tests specifically.
 
 ## Evidence inventory
 
