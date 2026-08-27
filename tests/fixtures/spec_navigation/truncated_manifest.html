@@ -1,0 +1,30 @@
+<!-- REAL-DERIVED MUTATED TEST FIXTURE: nav block minimized from the manual
+     browser-in-the-loop capture of
+     https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s1bc3x-56087
+     (2026-08-26, DEC-001). The `.epcVariation__schemas` container was manually
+     emptied (mutation) — zero group cards despite a non-empty category nav.
+
+     This is the ONLY truncation signal that is structurally detectable in the
+     currently available static-HTML evidence (see research.md §21, "Limitação
+     de observabilidade"): the real capture shows every declared nav category
+     backed by >=1 group card, so a declared-but-entirely-empty universe deviates
+     from the only observed real pattern. A *partial* truncation (e.g. 40 of 108
+     cards missing because of an unfinished lazy-load) is NOT distinguishable
+     from "legitimately smaller manifest" with this evidence, and is registered
+     as a known gap rather than guessed at with an invented cardinality. -->
+<!DOCTYPE html>
+<html>
+<body>
+  <div class="epcVariation__details">
+    <div class="epcVariation__filters">
+      <div class="epcVariation__schemaGroups">
+        <span>Choose group:</span>
+        <a class="epcVariation__schemaGroup active" data-id="" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s1bc3x-56087#">All</a>
+        <a class="epcVariation__schemaGroup" data-id="4" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s1bc3x-56087/front-axle-steering" title="Front axle, steering">Front axle, steering</a>
+      </div>
+    </div>
+    <div class="epcVariation__schemas">
+    </div>
+  </div>
+</body>
+</html>
