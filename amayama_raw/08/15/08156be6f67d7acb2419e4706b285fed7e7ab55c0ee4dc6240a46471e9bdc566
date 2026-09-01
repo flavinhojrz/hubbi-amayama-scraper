@@ -1,0 +1,93 @@
+<html lang="en"><head><meta http-equiv="origin-trial" content="A7vZI3v+Gz7JfuRolKNM4Aff6zaGuT7X0mf3wtoZTnKv6497cVMnhy03KDqX7kBz/q/iidW7srW31oQbBt4VhgoAAACUeyJvcmlnaW4iOiJodHRwczovL3d3dy5nb29nbGUuY29tOjQ0MyIsImZlYXR1cmUiOiJEaXNhYmxlVGhpcmRQYXJ0eVN0b3JhZ2VQYXJ0aXRpb25pbmczIiwiZXhwaXJ5IjoxNzU3OTgwODAwLCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ==">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Amayama.com</title>
+
+    <script type="text/javascript" async="" charset="utf-8" src="https://www.gstatic.com/recaptcha/releases/ox8dsmiqR62P1bqhciWOn7Fg/recaptcha__pt_br.js" crossorigin="anonymous" integrity="sha384-sA32WSvV3Kwy4tN2/jCG3EVIgPuxoYTrvoQINe/gv0IOPa4fF5umzk8aRPPHS3Wc"></script><script src="https://code.jquery.com/jquery-3.7.1.slim.min.js" integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+
+    <script>
+        window.isRecaptchaLoaded = false;
+        function onRecaptchaLoaded() {
+            window.isRecaptchaLoaded = true;
+        }
+
+        function getUrlParameter(param) {
+            var url = window.location.search.substring(1);
+            var urlVars = url.split('&');
+            var paramName, i;
+
+            for (i = 0; i < urlVars.length; i++) {
+                paramName = urlVars[i].split('=');
+
+                if (paramName[0] === param) {
+                    return paramName[1] === undefined
+                        ? null
+                        : decodeURIComponent(paramName[1]);
+                }
+            }
+
+            return null;
+        }
+
+        $(function() {
+            var $container = $('#captcha_form');
+            var $submitBtn = $container.find('input[type="submit"]');
+            var $loadingIndicator = $('#loading_indicator');
+
+            $submitBtn.prop('disabled', true);
+            $container.find('#referrer_value').val(getUrlParameter('return') || document.referrer);
+
+            if (! window.isRecaptchaLoaded) {
+                loadScript();
+            }
+            function loadScript() {
+                var script = document.createElement('script');
+                script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
+                script.defer = true;
+                document.body.appendChild(script);
+            }
+
+            var recaptchaInterval = setInterval(function () {
+                if (window.isRecaptchaLoaded && typeof grecaptcha !== 'undefined') {
+                    render();
+                    clearInterval(recaptchaInterval);
+                }
+            }, 1000);
+            function render() {
+                grecaptcha.render('recaptcha_bot', {
+                    callback: function (token) {
+                        $container.find('#captcha_value').val(token);
+                        $submitBtn.prop('disabled', false);
+                    }
+                });
+                $loadingIndicator.hide();
+            }
+        });
+    </script>
+</head>
+<body>
+
+<div>We’ve noticed some unusual activity.</div>
+<div>Please complete the captcha verification to confirm you’re not a bot.</div>
+<div>Thank you for your understanding!</div>
+
+<form method="post" class="logForm" action="/bot/captcha/verify" id="captcha_form">
+    <table>
+        <tbody><tr>
+            <td class="lc">
+                <p id="loading_indicator" class="loading-indicator" style="display: none;">Captcha is loading...</p>
+                <div id="recaptcha_bot" class="g-recaptcha" data-sitekey="6LfrOVUsAAAAACVda490M8-4gqbiErjfJCQxSl9s"><div style="width: 304px; height: 78px;"><div><iframe title="reCAPTCHA" width="304" height="78" role="presentation" name="a-5a086c7bx2dk" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6LfrOVUsAAAAACVda490M8-4gqbiErjfJCQxSl9s&amp;co=aHR0cHM6Ly93d3cuYW1heWFtYS5jb206NDQz&amp;hl=pt-BR&amp;v=ox8dsmiqR62P1bqhciWOn7Fg&amp;size=normal&amp;anchor-ms=20000&amp;execute-ms=30000&amp;cb=6f0q7lq59dwk"></iframe></div><textarea id="g-recaptcha-response" name="g-recaptcha-response" class="g-recaptcha-response" style="width: 250px; height: 40px; border: 1px solid rgb(193, 193, 193); margin: 10px 25px; padding: 0px; resize: none; display: none;"></textarea></div><iframe style="display: none;"></iframe></div>
+                <input type="hidden" name="captcha_value" id="captcha_value" value="0cAFcWeA6AJWoz-hOP-XLp3vaH440U5OkatRfK-IKDKWU7YRUMKH4Zrdx7z9cbW2hIHqMLw279j0oklrCqKoRAr7L6fbuyhQ0sU5wGGWTWElXi-4tIUhbxOVj7A5DorKDoYATfzfK_jUY3K_qlXXm-tpCvQjdAKhZmNwItbooJIpR8a8kytIjX5FKG8XUUzyxgXYn2HXKhlO7qy40Rp3Vnvd_5yRzPaCsIL8sNj3bUhRXuWhzkuorIVzXnKwoHU44AcQ4wyZ0EeoDzpUDdKCPtUnmZkr7ARRvs2zahl7I0-7t8r-A6S4903h5LI1ToUWvoDUwwPj_DzSn7Xc--hI7Qc-G--CBQZhB21dX72-8Rf0nh3_k5syW0Apd8MmmrB6W-znFvO7aG7yp9bKphwaZfDNS_rWibyUXXFM1JQhwc9wDeqgOoJWxE-ZAOz_jGRTzvmpx-ZDSWnmixKI32ZZG8xHHr3fW6pp5Q4s2kly56fw4MDY6Gc5MHcGc1n3eMp46SQ2xkuh0dX4ERcjs6kQ-52V7bTBH5-sIeJRXC5aH9FLLUFX-iMgNppBxaWPjdOM5D_FXANc3LstbPTNXFwAbdpf5LxNH-3UcpCeHSC_SW-DsaUdQ9w37QuWgxIT2x8BX0lC48N3f4w6am6PggPwO2N2EiZIr0AxNXKlR8kuxEWMAFK9WfMEcITGpsK1WuKkvRTX6IF0f2ODFFb-WLvGuUdKhV9iKg-lo1Xm4PZUlKiRQ81DV2xpZNGoAv3cFzZd-zspc4T9dUyu3k6E-sA9F8Yg1Ko2YQYaUswqn8g-aG1et-hTeq2IUsjoxX9ys8Dsg_OfeurQ9JR-892SeHPW_xMNN9Js3WBlSHHdK_bVe167d3FYhXPtaKkxW86cuJKqstomwWwwlpaecF7HKKTIvlPRSUJsV7NR6OEIE9JdOVBH4Lp9ckIaLp6imcatl87SckyQKRf0px5IwRKfinlDvb940o87EwiS8NZM-KRjLFO7OO9LElJdhz8walp2RETqlTYMFKNnO-IdPCyZ8ftsvMG8HCxdlOjtbk9anczm8eir88qbmyg0Ao25bCsuqaexYSS0Xtns7_s0jk6Dgg6XwYmNQJ0lHzD4XwATiqHkbZCT6HnxTQYOY9IQ79zOXF6Ja6Us9tlcxYT678ccIc-DfUFZ2QMzvCL5KioDK2sMRsQlVhtw1B4J_1Y9LbOJ9M8nHsK_S7436UcsM4nvQT_m_VPmWHIoQnmzOK0HlFfH4PJ5l0DG1CZIuuaWCIkAy-hQIKVRpwKAMJ7O_d0jYnOAO9P-Kc-X5vrYdw2mhKg1lagsMO_sDnfiPqTF3YvXNbVN2vd50pKwCiXUOyN3_OCqTNqBI6AkqxnkKveBR-SSikcSQ3V_hb2Q48KzIO_X529d2TRePX2PJzzF0WAINlrRktnFp2jGGfHjNARQFxY0x0WvbRv0RhGMORrr_OWdJCqxgLGe2m5l22G9-5eRRWvFivtxffgskEkOVcd25sXi6nuud8lEzBPjNTJ6-8M9XCQ092J3I9uG6vKgefFYij2qnOdKUMjcbY_YkmONzWU9hBU9PCdnIhsyqm3O3N48nx84tXMWZLfo3x2PUWJ3AyjnN0r5hHE_EtP5zT7YQHFzx_vV6NOC5AoRtOKcAakXgMHUFe7ABcqmgeXyD8YK7kSwtxXNJ402ENxmycRIggWOUWURTh4OebDlswwZmVgSxSjaTUQTJzdQfTYFTPQGWezJUlXtuPePzpP3dtOAAccziezoqtazkda6Dc32dFjJWbaWUN8mC0ml_-i9IsVjh6G-P6HmjIEkeI-DOWcr5TQd-bPaYHDri2zH2CYB8aWuR8uU1Hfk8Lzt2lraLT-ZOP3Uo1xqYwMau3Q02sHHBAkAkoesyrsm808vDNhbFRQaJniAUhQIUIDSsveMeFdI2DZhHjXZjik9t6JZ8JnGx7-voI-m6fcMY4-5n7HHRkISU9F8LRd755BB9cbAFLTguBt4kSGFMgCzgNq3rC38GfQo7aETVCQk37aQ4ssXQv5vTXMij3VmbJtvPufDuijK3be5OiX0E6oOugYpAEjepLyygxARNIRLN9Sw2X05pCP-U7bUb12hSkTpoowb0k_1fjpkIaktEJ17nwnT2RTf5SyAAwdAHrzFSWIcJVyhunMjL3uJeYYonoox7dYOAQEm1EnekSj6e0OOOKfm_e1cv0jJQb0RjMz_JK3Dq0HORZSdzULI9WeuMBKTY6iwM4FopnIegXkdzwbvCqO-iRZypEnOa17HPX8F2sxZj1-DAIrfTCHPIH44sDTqjm7wMqpULYh_bHZNFpdeGiPt7u9Sj5v_f3-nBJ_01iMXLyLXy9Kegj6pitiQeNa0O7xZiQID2PrANsyOibnpPibobt09SXYKJ6Og-9OE8_5k1RBYA">
+                <input type="hidden" name="referrer_value" id="referrer_value" value="/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s6ba74-61101/engine/105">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input name="submit" value="Submit" class="ok" type="submit">
+            </td>
+        </tr>
+    </tbody></table>
+</form>
+
+<script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&amp;render=explicit" defer=""></script></body></html>

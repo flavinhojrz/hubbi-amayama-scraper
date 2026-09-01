@@ -15,6 +15,12 @@ DOMAIN_LAYER_PACKAGES = (
     "equivalence",
     "assets",
     "snapshots",
+    # 003-corpus-analysis-tool — analysis/ computa relatórios sobre dados já
+    # carregados por persistence/repositories/*.py; nunca deve importar
+    # sqlite3 nem amayama_scraper.persistence diretamente (achado
+    # arquitetural do Codex corrigido movendo UNAVAILABLE_HASH para
+    # fingerprints/types.py, uma camada neutra que ambos podem importar).
+    "analysis",
 )
 
 FORBIDDEN_IMPORT_ROOTS = (
@@ -73,6 +79,21 @@ def test_domain_layer_package_has_no_forbidden_imports(package: str) -> None:
                 name == forbidden_pkg or name.startswith(forbidden_pkg + ".")
                 for name in allowed_imported
             ), f"{path} imports forbidden internal package {forbidden_pkg!r}: {imported}"
+
+
+def test_pipeline_never_imports_transport_package() -> None:
+    """T013 (002) — orchestration/pipeline.py (núcleo já existente de 001)
+    permanece livre de qualquer conhecimento de transporte/Selenium/CDP —
+    research.md §5/§13 de 002. `transport/` não está em
+    DOMAIN_LAYER_PACKAGES por desenho (é uma folha fora do domínio), então
+    esta checagem é explícita em vez de coberta pelo teste parametrizado
+    acima."""
+    pipeline = SRC_ROOT / "orchestration" / "pipeline.py"
+    imported = _imported_module_names(pipeline)
+    assert not any(
+        name == "amayama_scraper.transport" or name.startswith("amayama_scraper.transport.")
+        for name in imported
+    ), f"orchestration/pipeline.py must never import amayama_scraper.transport, found: {imported}"
 
 
 def test_spec_identity_has_no_inferred_vehicle_attribute_fields() -> None:

@@ -35,6 +35,33 @@ def save_collection_run(conn: sqlite3.Connection, run: CollectionRun) -> None:
     )
 
 
+def list_incomplete_runs(conn: sqlite3.Connection, scope: str) -> list[CollectionRun]:
+    """CollectionRun com scope == scope e completed_at IS NULL, mais antigo primeiro.
+
+    T026/T027 (002) — data-model.md §7, DEC-005. Leitura aditiva sobre a
+    tabela collection_run já existente — nenhuma migration. Note que este
+    construtor de linha não usa `CollectionRun(...)` diretamente para
+    permitir refletir corretamente uma linha de escopo estrangeiro que só
+    pode existir via SQL direto (CollectionRun.__post_init__ recusaria
+    construí-la em Python) — o filtro `WHERE scope = ?` já a exclui do
+    resultado antes disso ser relevante.
+    """
+    rows = conn.execute(
+        "SELECT * FROM collection_run WHERE scope = ? AND completed_at IS NULL ORDER BY started_at",
+        (scope,),
+    ).fetchall()
+    return [
+        CollectionRun(
+            run_id=row["run_id"],
+            scope=row["scope"],
+            started_at=datetime.fromisoformat(row["started_at"]) if row["started_at"] else None,
+            resumed_at=datetime.fromisoformat(row["resumed_at"]) if row["resumed_at"] else None,
+            completed_at=None,
+        )
+        for row in rows
+    ]
+
+
 def get_collection_run(conn: sqlite3.Connection, run_id: str) -> CollectionRun | None:
     row = conn.execute("SELECT * FROM collection_run WHERE run_id = ?", (run_id,)).fetchone()
     if row is None:

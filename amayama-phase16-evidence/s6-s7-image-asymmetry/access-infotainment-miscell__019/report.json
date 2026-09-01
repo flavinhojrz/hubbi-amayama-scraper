@@ -1,0 +1,29 @@
+{
+  "status": "FOUND",
+  "category": "access-infotainment-miscell",
+  "group_id": "019",
+  "s6_spec": "s6bc74-61127",
+  "s7_spec": "s7bc74-61187",
+  "schema_ids": [
+    "19010",
+    "19011"
+  ],
+  "parts_signature": "bf3702404e1e63ed87635cdd39711a58eafc9541cc7ca606563b47ce5fd7476a",
+  "parts_equal": true,
+  "image_presence_diff_schema_ids": [
+    "19010",
+    "19011"
+  ],
+  "s6_image_presence": {
+    "19010": false,
+    "19011": false
+  },
+  "s7_image_presence": {
+    "19010": true,
+    "19011": true
+  },
+  "s6_url": "https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s6bc74-61127/access-infotainment-miscell/019",
+  "s7_url": "https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s7bc74-61187/access-infotainment-miscell/019",
+  "s6_file": "/home/flavio/dev/hubbi/hubbi-amayama-scraper/amayama-phase16-evidence/s6-s7-image-asymmetry/access-infotainment-miscell__019/s6bc74-61127__access-infotainment-miscell__019.html",
+  "s7_file": "/home/flavio/dev/hubbi/hubbi-amayama-scraper/amayama-phase16-evidence/s6-s7-image-asymmetry/access-infotainment-miscell__019/s7bc74-61187__access-infotainment-miscell__019.html"
+}

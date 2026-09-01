@@ -53,3 +53,21 @@ def test_pending_to_in_progress_to_accepted():
     assert entry.status == CheckpointStatus.ACCEPTED
     assert entry.raw_capture_id == "cap-1"
     assert entry.completed_at is not None
+
+
+def test_rejected_can_transition_back_to_in_progress_via_start_attempt():
+    """T047 (002) — regressão/confirmação, não nova funcionalidade: a máquina
+    de estados já existente de 001 já permite REJECTED -> IN_PROGRESS via
+    START_ATTEMPT (checkpoint/checkpoint_entry.py::transition()). Isso é o
+    que torna DEC-006 (retry manual de unidades REQUIRES_EXPLICIT_RETRY)
+    implementável sem qualquer nova transição de estado (research.md §9)."""
+    conn = _conn()
+    upsert_checkpoint(conn, event=CheckpointEvent.START_ATTEMPT, **_kwargs())
+    rejected = upsert_checkpoint(
+        conn, event=CheckpointEvent.REJECT, evidence={"outcome": "INVALID"}, **_kwargs()
+    )
+    assert rejected.status == CheckpointStatus.REJECTED
+
+    retried = upsert_checkpoint(conn, event=CheckpointEvent.START_ATTEMPT, **_kwargs())
+    assert retried.status == CheckpointStatus.IN_PROGRESS
+    assert retried.attempt_count == 2
