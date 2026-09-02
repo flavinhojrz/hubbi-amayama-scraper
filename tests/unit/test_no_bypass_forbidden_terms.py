@@ -39,7 +39,7 @@ FORBIDDEN_TERMS = (
 def _assert_no_forbidden_terms(files: list[Path]) -> None:
     assert files, "expected source files to exist"
     for path in files:
-        lowered = path.read_text().lower()
+        lowered = path.read_text(encoding="utf-8").lower()
         for pattern in FORBIDDEN_TERMS:
             assert not re.search(pattern, lowered), f"{path} contains forbidden term {pattern!r}"
 

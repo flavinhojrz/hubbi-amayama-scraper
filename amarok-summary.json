@@ -1,0 +1,38 @@
+{
+  "categories_total": 1134,
+  "groups_per_spec": {
+    "max": 108,
+    "mean": 32.103305785123965,
+    "median": 4.0,
+    "min": 1,
+    "sample_size": 242
+  },
+  "groups_total": 7769,
+  "parts_per_spec": {
+    "max": 7012,
+    "mean": 1718.0082644628098,
+    "median": 6.0,
+    "min": 0,
+    "sample_size": 242
+  },
+  "parts_total": 415758,
+  "schemas_per_spec": {
+    "max": 454,
+    "mean": 115.32644628099173,
+    "median": 4.0,
+    "min": 1,
+    "sample_size": 242
+  },
+  "schemas_total": 27909,
+  "scope": {
+    "label": "VOLKSWAGEN / AMAROK / AMA-BR",
+    "manufacturer": "VOLKSWAGEN",
+    "market": "AMA-BR",
+    "vehicle_model": "AMAROK"
+  },
+  "specs_considered_for_distribution": 242,
+  "specs_discovered": 242,
+  "specs_incomplete_or_problematic": 0,
+  "specs_valid_complete": 242,
+  "specs_with_zero_parts": 1
+}

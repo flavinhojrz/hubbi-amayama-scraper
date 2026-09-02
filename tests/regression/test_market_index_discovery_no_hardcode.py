@@ -34,7 +34,7 @@ def test_no_forbidden_catalog_code_appears_anywhere_in_production_source() -> No
     for path in sorted(SRC_ROOT.rglob("*.py")):
         text = path.read_text(encoding="utf-8")
         upper = text.upper()
-        relative = str(path.relative_to(SRC_ROOT))
+        relative = path.relative_to(SRC_ROOT).as_posix()
         for code in FORBIDDEN_CATALOG_CODES:
             if code in upper and (relative, code) not in _KNOWN_PRE_EXISTING_DOCSTRING_EXAMPLES:
                 offenders.append(f"{path}: contains {code!r}")

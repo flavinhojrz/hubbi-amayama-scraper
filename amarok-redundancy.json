@@ -1,0 +1,615 @@
+{
+  "clusters": [
+    {
+      "members": [
+        {
+          "amayama_catalog_id": "61091",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S6BA33",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "2b780f4c2c1a8d92d6417beb795066a49ecdb4190e2550eac40816196ec9928e"
+        },
+        {
+          "amayama_catalog_id": "61093",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S6BA3A",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "457300f1db587a79eff46368bcd2fea6b8775cb86509da9b0572acedd82750e0"
+        },
+        {
+          "amayama_catalog_id": "61099",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S6BA64",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2020.06",
+          "stable_key": "50685d2f19e5fb0f6509bea9f855566eafa3615e19043b2fcc560d35208d1167"
+        },
+        {
+          "amayama_catalog_id": "61101",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S6BA74",
+          "parts_count": 7012,
+          "production_period_raw": "2017.03 - 2022.05",
+          "stable_key": "320ea34f554d5cc3f3564bbc5c2cdb1a6a0a2ade58238b7811faa3d41390c9f5"
+        },
+        {
+          "amayama_catalog_id": "61115",
+          "configuration": null,
+          "grade": "Comfortline",
+          "model_code": "S6BB7A",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "1be48d43bbeca95f5742ed395ed2c47160ae2e03967bdcce95e7efd5fcee82c2"
+        },
+        {
+          "amayama_catalog_id": "61124",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S6BC54",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2020.06",
+          "stable_key": "5981223c9780daf8246570e7e6a8da5bab04d6c291c94ed4f0884d186dd34195"
+        },
+        {
+          "amayama_catalog_id": "61126",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S6BC6A",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2020.08",
+          "stable_key": "0f385399135d0da8230f5d219ab0d50e2ef5547927a5c51ff34a2ebb5af14732"
+        },
+        {
+          "amayama_catalog_id": "61137",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S6BD54",
+          "parts_count": 7012,
+          "production_period_raw": "2018.05 - 2020.06",
+          "stable_key": "3f38c79851cfc50d727bb20c3cf0c95dcefde9de256b288617e23e1af1993a84"
+        },
+        {
+          "amayama_catalog_id": "61138",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S6BD64",
+          "parts_count": 7012,
+          "production_period_raw": "2018.05 - 2020.06",
+          "stable_key": "38458268e89752a70ec94cfeae865db0e8b1d62e22987200e9b7c76c081b9dba"
+        },
+        {
+          "amayama_catalog_id": "61139",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S6BD6A",
+          "parts_count": 7012,
+          "production_period_raw": "2018.05 - 2020.08",
+          "stable_key": "143e556058fe95d905e16757c1a39e32f3374a683e4ba4f68f5ee80ff71c60e2"
+        },
+        {
+          "amayama_catalog_id": "61141",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S6BD7A",
+          "parts_count": 7012,
+          "production_period_raw": "2018.05 - 2022.05",
+          "stable_key": "2fd0c7ed7a71a11cc446fcf9f655a9f80354ae7213fc1d4088bb026daa459407"
+        },
+        {
+          "amayama_catalog_id": "61142",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S6BD8A",
+          "parts_count": 7012,
+          "production_period_raw": "2018.05 - 2022.05",
+          "stable_key": "46bb2252e64f7f0208a93716ab98a23fda17a68b0a719717802dc9a5e8a6684e"
+        },
+        {
+          "amayama_catalog_id": "61147",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7AA43",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "4cd0289592b1b18902e329f5e268a6d0bd38f47ae0e3e2bd0e8e6cc98039079b"
+        },
+        {
+          "amayama_catalog_id": "61150",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7BA33",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "4aa364138dc87de9613ab1303db03ee145c0ba783cea7968dd4931e9b37a4437"
+        },
+        {
+          "amayama_catalog_id": "61152",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7BA3A",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "1f4bae97bbb41643f563885f25a9efe3f33851771d354d5004afe66c8a05f62b"
+        },
+        {
+          "amayama_catalog_id": "61156",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7BA53",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2019.08",
+          "stable_key": "00c962d061fb1a4c40c6246e2f7b599c596295c94cedc5fd41aaafea5fd9cfa8"
+        },
+        {
+          "amayama_catalog_id": "61157",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7BA54",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2020.06",
+          "stable_key": "361d847391553bcbe4b6c12b4d921ba33dbde46dc08e9c5f14e1f470230e968b"
+        },
+        {
+          "amayama_catalog_id": "61161",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7BA7A",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "362fa13ea6dcdf0dd8170bfb01b8e1051cfca2b6527bf9d9d6582ebc8e63d127"
+        },
+        {
+          "amayama_catalog_id": "61174",
+          "configuration": null,
+          "grade": "Comfortline",
+          "model_code": "S7BB7A",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "21ac3ea99026152f3d9dd8810e0ca397c7cffe33d2936efe8e7e75761fb42801"
+        },
+        {
+          "amayama_catalog_id": "61181",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S7BC43",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "1761fa047dd977f3d6df1f487956ac5491f520f8b82beb1ba84685bbb85c5590"
+        },
+        {
+          "amayama_catalog_id": "61185",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S7BC64",
+          "parts_count": 7012,
+          "production_period_raw": "2016.06 - 2020.06",
+          "stable_key": "33335e1934990d8b354c7b019bd946a89905732bec69713be7612937d44eb70d"
+        },
+        {
+          "amayama_catalog_id": "61189",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S7BC8A",
+          "parts_count": 7012,
+          "production_period_raw": "2019.08 - 2022.05",
+          "stable_key": "25ec9b6f2eb1ffd5951698d6794aa239dd5333d82223e4367a338ce52b124c64"
+        },
+        {
+          "amayama_catalog_id": "61191",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S7BD33",
+          "parts_count": 7012,
+          "production_period_raw": "2018.08 - 2022.05",
+          "stable_key": "18b32a1d6fc7b2ab367e211b412e47b96a5890c5f1ffc8bca84993ae5323fbdb"
+        },
+        {
+          "amayama_catalog_id": "61196",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S7BD44",
+          "parts_count": 7012,
+          "production_period_raw": "2018.08 - 2022.05",
+          "stable_key": "1cf6981987478dcfc80c71985d9771384f7bf9b7206a0e5936292d50a0379060"
+        },
+        {
+          "amayama_catalog_id": "61199",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S7BD8A",
+          "parts_count": 7012,
+          "production_period_raw": "2019.08 - 2022.05",
+          "stable_key": "3bee6cb139e4b866cce658a0da36d0ae8843096a3aa59a66b6c5b93cd5d12757"
+        }
+      ],
+      "size": 25,
+      "spec_parts_hash": "ce81edee8092bb02d1ad465c63d255bea4b7099bce14162aa5cf7d2bd5cfd546"
+    },
+    {
+      "members": [
+        {
+          "amayama_catalog_id": "56034",
+          "configuration": null,
+          "grade": "Basis",
+          "model_code": "2HAA43",
+          "parts_count": 5829,
+          "production_period_raw": "2012.07 - 2016.10",
+          "stable_key": "60eb1b0c31aba5eb786687d11eddc0d747060acb44f16e5b2d351b739b487d7c"
+        },
+        {
+          "amayama_catalog_id": "56035",
+          "configuration": null,
+          "grade": "Basis",
+          "model_code": "2HAA44",
+          "parts_count": 5829,
+          "production_period_raw": "2012.07 - 2016.10",
+          "stable_key": "0528ab019eae912bec9941ca248b2d1736a124292705e4f2bbf090d6f3f893df"
+        },
+        {
+          "amayama_catalog_id": "56038",
+          "configuration": null,
+          "grade": "Basis",
+          "model_code": "2HBA14",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2013.10",
+          "stable_key": "2c4715f5083d49ad7772803de53dc0b5ed5733468291138164abad59ac267ee6"
+        },
+        {
+          "amayama_catalog_id": "56042",
+          "configuration": null,
+          "grade": "Basis",
+          "model_code": "2HBA3X",
+          "parts_count": 5829,
+          "production_period_raw": "2014.07 - 2016.10",
+          "stable_key": "0b4c89106c7b178c47ff1d2b94991e810d729e6e12c08cb7489849be9ce55cea"
+        },
+        {
+          "amayama_catalog_id": "56047",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "2HBB14",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2012.10",
+          "stable_key": "4d6f59b27c6062c5d4daa2b2047d992f5df7f469bc50e1b9e2e6735f43040d85"
+        },
+        {
+          "amayama_catalog_id": "56052",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "2HBB43",
+          "parts_count": 5829,
+          "production_period_raw": "2012.07 - 2016.10",
+          "stable_key": "434619a6a28f74da035444e1f145185be8fd06b766a3265af1b98f56b39b9d76"
+        },
+        {
+          "amayama_catalog_id": "56056",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "2HBC14",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2012.10",
+          "stable_key": "3efe398bb2a027e1f65dc06403117e3f7d2b4e08463247d87b9af412871fa5f0"
+        },
+        {
+          "amayama_catalog_id": "56057",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "2HBC33",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2016.10",
+          "stable_key": "054c7603e82b8f0d028e90a7c52b0159477eb2953d5357d3abafb26b3a48b4cf"
+        },
+        {
+          "amayama_catalog_id": "56060",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "2HBC3X",
+          "parts_count": 5829,
+          "production_period_raw": "2014.07 - 2016.10",
+          "stable_key": "340cb2cebd90637c340111a83c48f099d7d4f44054acefbb224fd7e765a3aca1"
+        },
+        {
+          "amayama_catalog_id": "56066",
+          "configuration": null,
+          "grade": "Basis",
+          "model_code": "S1BA33",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2016.10",
+          "stable_key": "10a99adff9571566b9cefa408929a56407e332a18cb4a1cac06fdfe143e5aaf7"
+        },
+        {
+          "amayama_catalog_id": "56073",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S1BB13",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2012.10",
+          "stable_key": "0a9c839f893a9a1bd1ca7eb39aef939892d0fc7f1b6a86ca2f9ddb875083a409"
+        },
+        {
+          "amayama_catalog_id": "56075",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S1BB33",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2016.10",
+          "stable_key": "471faca9aebc187a8c4115871808bd1878cc65c098671c623cadcd520ebcfaaa"
+        },
+        {
+          "amayama_catalog_id": "56076",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S1BB34",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2016.10",
+          "stable_key": "365e3198db0bd322ed210b610763dd013ce59d44127b7a7ebac57839ac52ada7"
+        },
+        {
+          "amayama_catalog_id": "56078",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S1BB3X",
+          "parts_count": 5829,
+          "production_period_raw": "2014.07 - 2016.10",
+          "stable_key": "10b6ba9d18ffd01b1f085cfb51c64418e5c64721d29a28d89631a359053e44b3"
+        },
+        {
+          "amayama_catalog_id": "56082",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S1BC13",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2012.10",
+          "stable_key": "278f82f3f8de698c3df80eeb5e96c36e150945d4bab6334553ab5b5fae5a9641"
+        },
+        {
+          "amayama_catalog_id": "56085",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S1BC34",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2016.10",
+          "stable_key": "0ff7a02eb2642b20427eada676b3a97f24605dc29dffe74fdafbe3e889437ee0"
+        },
+        {
+          "amayama_catalog_id": "56088",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S1BC43",
+          "parts_count": 5829,
+          "production_period_raw": "2012.07 - 2016.10",
+          "stable_key": "0c69f1dafff0f0a161457ff3968464eed425d6f9a718ca8044afa4df828b0a17"
+        },
+        {
+          "amayama_catalog_id": "56090",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S1BCB3",
+          "parts_count": 5829,
+          "production_period_raw": "2012.05 - 2016.10",
+          "stable_key": "2675c1ebd58eb1559f1b6d429c82cf6c48717fccfb236c2f7882c9e83a18443b"
+        }
+      ],
+      "size": 18,
+      "spec_parts_hash": "3c7876469543385dcd4aca0f76f205dae380c75f30df74e48f7a17f81cf980ef"
+    },
+    {
+      "members": [
+        {
+          "amayama_catalog_id": "53332",
+          "configuration": null,
+          "grade": "Amarok single cab",
+          "model_code": "2HAB13",
+          "parts_count": 4885,
+          "production_period_raw": "2010.09 - 2012.08",
+          "stable_key": "0d68237fc5f69802400ff94b87ff3768e055a8dd34b46428df9f4db240f21072"
+        },
+        {
+          "amayama_catalog_id": "53333",
+          "configuration": null,
+          "grade": "Amarok single cab",
+          "model_code": "2HAB14",
+          "parts_count": 4885,
+          "production_period_raw": "2010.09 - 2012.08",
+          "stable_key": "35d1fe060cd9267d7e21659f23671f1e516362a60c10b3246e1f9e082a40e6bf"
+        },
+        {
+          "amayama_catalog_id": "53334",
+          "configuration": null,
+          "grade": "Amarok single cab",
+          "model_code": "2HAB23",
+          "parts_count": 4885,
+          "production_period_raw": "2010.03 - 2012.08",
+          "stable_key": "251c55357ef95c01ffa187c2a88fc5563dd3bc424398f96dac88dddfe0c3c50f"
+        },
+        {
+          "amayama_catalog_id": "53346",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBA33",
+          "parts_count": 4885,
+          "production_period_raw": "2011.11 - 2012.08",
+          "stable_key": "0a75c359d7a8fad89263b3263a33fc8a8d78085fbac4f89ab92370b55415f303"
+        },
+        {
+          "amayama_catalog_id": "53348",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBA3A",
+          "parts_count": 4885,
+          "production_period_raw": "2011.11 - 2012.10",
+          "stable_key": "3c90f351db4c9b6b9915bdc94fc949969f76ab929563a17633bb0b1d66f8b9c3"
+        },
+        {
+          "amayama_catalog_id": "53351",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBB14",
+          "parts_count": 4885,
+          "production_period_raw": "2010.09 - 2012.08",
+          "stable_key": "54bc18ff2c47dea80f73d5cd90911e99027726d6546f438577d523744c0050ca"
+        },
+        {
+          "amayama_catalog_id": "53354",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBB33",
+          "parts_count": 4885,
+          "production_period_raw": "2011.11 - 2012.08",
+          "stable_key": "0a7cae345e01d8323c38029f437f4cb871031ce6ffa3cf4a188c00fa644f8f03"
+        },
+        {
+          "amayama_catalog_id": "53359",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBC14",
+          "parts_count": 4885,
+          "production_period_raw": "2010.09 - 2012.08",
+          "stable_key": "32ed65853b985b8e626d8fa292b3d3b0ce26a51c5a8330483b7a260804c15a7f"
+        },
+        {
+          "amayama_catalog_id": "53360",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBC23",
+          "parts_count": 4885,
+          "production_period_raw": "2010.03 - 2012.08",
+          "stable_key": "0b400262811cf382ee2d6a112abac0d5d552426203ab529446b28b686f8db9b4"
+        },
+        {
+          "amayama_catalog_id": "53362",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBC33",
+          "parts_count": 4885,
+          "production_period_raw": "2011.11 - 2012.08",
+          "stable_key": "17286965ac0d0a207a81bfcefc13256c0c562d7235f9bcde7921c56e12611353"
+        },
+        {
+          "amayama_catalog_id": "53364",
+          "configuration": null,
+          "grade": "Amarok twin cab",
+          "model_code": "2HBC3A",
+          "parts_count": 4885,
+          "production_period_raw": "2011.11 - 2012.08",
+          "stable_key": "2bbec466bf1c1a4871854d495d3da8e4f74963bf6cbd950cc7f04d50544fa5ba"
+        }
+      ],
+      "size": 11,
+      "spec_parts_hash": "93800cd37b10e677ce34c9361410ed09410cf09f0647a82c7f85f4b7ed86f0ba"
+    },
+    {
+      "members": [
+        {
+          "amayama_catalog_id": "62159",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "AGDA44",
+          "parts_count": 5178,
+          "production_period_raw": "2024.04 - ...",
+          "stable_key": "09fae4aa5873ca90fecb6a846f7c97eb054bb715e7a792a28488f40581654cbd"
+        },
+        {
+          "amayama_catalog_id": "62160",
+          "configuration": null,
+          "grade": "Comfortline",
+          "model_code": "AGDB33",
+          "parts_count": 5178,
+          "production_period_raw": "2024.04 - ...",
+          "stable_key": "5823529ad7abccc9579a2b7aa4dabaf2b7158be0e0982dc712e37c2e46e532c5"
+        },
+        {
+          "amayama_catalog_id": "62171",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S7BA43",
+          "parts_count": 5178,
+          "production_period_raw": "2022.06 - ...",
+          "stable_key": "574184d5e9df094da6ceb33c5ba67440d92871c5d2dbfdf04965f321d65cbc42"
+        },
+        {
+          "amayama_catalog_id": "62175",
+          "configuration": null,
+          "grade": "Comfortline",
+          "model_code": "S7BB3A",
+          "parts_count": 5178,
+          "production_period_raw": "2022.06 - ...",
+          "stable_key": "5a661ad44c74bcf0f267c4482b7867fa69361baa4658e78f05575b8b8a03ed5f"
+        },
+        {
+          "amayama_catalog_id": "62183",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S7BC7A",
+          "parts_count": 5178,
+          "production_period_raw": "2022.06 - ...",
+          "stable_key": "5a823d6a36081a97f907ed206a49a4f45cf80b99e05ed3b407b1fb25a6baa62c"
+        },
+        {
+          "amayama_catalog_id": "62184",
+          "configuration": null,
+          "grade": "Highline",
+          "model_code": "S7BC8A",
+          "parts_count": 5178,
+          "production_period_raw": "2022.06 - ...",
+          "stable_key": "0868ae30ed06a23effe28af18fb8f7e94041ac07f5abda82beb8d60e182b05ba"
+        },
+        {
+          "amayama_catalog_id": "62185",
+          "configuration": null,
+          "grade": "Aventura",
+          "model_code": "S7BD7A",
+          "parts_count": 5178,
+          "production_period_raw": "2022.06 - ...",
+          "stable_key": "158268b9189c3b6f05e94bc0bc4434b9f09c7b5c914bde4c03ebe1dfaf7bed04"
+        }
+      ],
+      "size": 7,
+      "spec_parts_hash": "f1c4468adadb98dab3e315ce3e7187c7b6ed31261189bbf3bad9bd7241964c80"
+    },
+    {
+      "members": [
+        {
+          "amayama_catalog_id": "61097",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S6BA53",
+          "parts_count": 1,
+          "production_period_raw": "2016.06 - 2019.08",
+          "stable_key": "b94c613b29f39b3b48748686b38555f0d829e10d9d881a421b4ec41ae0cdba76"
+        },
+        {
+          "amayama_catalog_id": "61102",
+          "configuration": null,
+          "grade": "Trendline",
+          "model_code": "S6BA7A",
+          "parts_count": 1,
+          "production_period_raw": "2016.06 - 2022.05",
+          "stable_key": "73195e4b2250ae105e9a8756a1f1bc67b536756a3c61601111a74b35cf38ed59"
+        }
+      ],
+      "size": 2,
+      "spec_parts_hash": "e02aec4d698a3b8d5e368cc6b9bce90e0eeb909622dda53c6552148db1c80ed4"
+    }
+  ],
+  "distinct_image_hash": 67,
+  "distinct_schema_semantic_hash": 178,
+  "distinct_spec_parts_hash": 184,
+  "distinct_structure_hash": 178,
+  "isolated_spec_count": 179,
+  "largest_cluster_size": 25,
+  "potential_reduction_ratio": 0.2396694214876033,
+  "scope": {
+    "label": "VOLKSWAGEN / AMAROK / AMA-BR",
+    "manufacturer": "VOLKSWAGEN",
+    "market": "AMA-BR",
+    "vehicle_model": "AMAROK"
+  },
+  "specs_considered": 242
+}
