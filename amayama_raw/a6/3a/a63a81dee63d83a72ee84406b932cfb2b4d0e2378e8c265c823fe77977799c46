@@ -1,0 +1,93 @@
+<html lang="en"><head><meta http-equiv="origin-trial" content="A7vZI3v+Gz7JfuRolKNM4Aff6zaGuT7X0mf3wtoZTnKv6497cVMnhy03KDqX7kBz/q/iidW7srW31oQbBt4VhgoAAACUeyJvcmlnaW4iOiJodHRwczovL3d3dy5nb29nbGUuY29tOjQ0MyIsImZlYXR1cmUiOiJEaXNhYmxlVGhpcmRQYXJ0eVN0b3JhZ2VQYXJ0aXRpb25pbmczIiwiZXhwaXJ5IjoxNzU3OTgwODAwLCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ==">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Amayama.com</title>
+
+    <script type="text/javascript" async="" charset="utf-8" src="https://www.gstatic.com/recaptcha/releases/ox8dsmiqR62P1bqhciWOn7Fg/recaptcha__pt_br.js" crossorigin="anonymous" integrity="sha384-sA32WSvV3Kwy4tN2/jCG3EVIgPuxoYTrvoQINe/gv0IOPa4fF5umzk8aRPPHS3Wc"></script><script src="https://code.jquery.com/jquery-3.7.1.slim.min.js" integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+
+    <script>
+        window.isRecaptchaLoaded = false;
+        function onRecaptchaLoaded() {
+            window.isRecaptchaLoaded = true;
+        }
+
+        function getUrlParameter(param) {
+            var url = window.location.search.substring(1);
+            var urlVars = url.split('&');
+            var paramName, i;
+
+            for (i = 0; i < urlVars.length; i++) {
+                paramName = urlVars[i].split('=');
+
+                if (paramName[0] === param) {
+                    return paramName[1] === undefined
+                        ? null
+                        : decodeURIComponent(paramName[1]);
+                }
+            }
+
+            return null;
+        }
+
+        $(function() {
+            var $container = $('#captcha_form');
+            var $submitBtn = $container.find('input[type="submit"]');
+            var $loadingIndicator = $('#loading_indicator');
+
+            $submitBtn.prop('disabled', true);
+            $container.find('#referrer_value').val(getUrlParameter('return') || document.referrer);
+
+            if (! window.isRecaptchaLoaded) {
+                loadScript();
+            }
+            function loadScript() {
+                var script = document.createElement('script');
+                script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
+                script.defer = true;
+                document.body.appendChild(script);
+            }
+
+            var recaptchaInterval = setInterval(function () {
+                if (window.isRecaptchaLoaded && typeof grecaptcha !== 'undefined') {
+                    render();
+                    clearInterval(recaptchaInterval);
+                }
+            }, 1000);
+            function render() {
+                grecaptcha.render('recaptcha_bot', {
+                    callback: function (token) {
+                        $container.find('#captcha_value').val(token);
+                        $submitBtn.prop('disabled', false);
+                    }
+                });
+                $loadingIndicator.hide();
+            }
+        });
+    </script>
+</head>
+<body>
+
+<div>We’ve noticed some unusual activity.</div>
+<div>Please complete the captcha verification to confirm you’re not a bot.</div>
+<div>Thank you for your understanding!</div>
+
+<form method="post" class="logForm" action="/bot/captcha/verify" id="captcha_form">
+    <table>
+        <tbody><tr>
+            <td class="lc">
+                <p id="loading_indicator" class="loading-indicator">Captcha is loading...</p>
+                <div id="recaptcha_bot" class="g-recaptcha" data-sitekey="6LfrOVUsAAAAACVda490M8-4gqbiErjfJCQxSl9s"></div>
+                <input type="hidden" name="captcha_value" id="captcha_value">
+                <input type="hidden" name="referrer_value" id="referrer_value" value="/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br/s7aa43-61147/access-infotainment-miscell/075">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input name="submit" value="Submit" class="ok" type="submit" disabled="">
+            </td>
+        </tr>
+    </tbody></table>
+</form>
+
+<script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&amp;render=explicit" defer=""></script></body></html>

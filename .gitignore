@@ -54,3 +54,23 @@ Thumbs.db
 # Antigravity local/private state
 .antigravity/
 .antigravity-local/
+
+# Scraper runtime data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Raw captures / benchmark artifacts
+raw/
+raw-*/
+benchmark-*/
+benchmark*.db
+benchmark*.sqlite*
+amayama-raw/
+artifacts/
+
+# Local browser/runtime
+chrome-profile/
+cdp-profile/

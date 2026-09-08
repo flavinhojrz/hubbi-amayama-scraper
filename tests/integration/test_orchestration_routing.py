@@ -5,6 +5,8 @@ antes de qualquer parser (contracts/input-contracts.md)."""
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT, register_spec
+
 from amayama_scraper.checkpoint.checkpoint_entry import CheckpointStatus
 from amayama_scraper.checkpoint.collection_run import CollectionRun
 from amayama_scraper.ingestion.capture_input import RawCaptureInput
@@ -53,6 +55,7 @@ def test_market_index_accepted_registers_discovered_entries(tmp_path: Path):
             raw_content=html,
             run_id="run-1",
         ),
+    context=AMAROK_CONTEXT,
     )
 
     assert result.validation_outcome is ValidationOutcome.ACCEPTED
@@ -65,6 +68,7 @@ def test_market_index_accepted_registers_discovered_entries(tmp_path: Path):
 
 def test_spec_navigation_accepted_saves_manifest(tmp_path: Path):
     conn, blob_store, capture_repo = _setup(tmp_path)
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     html = (FIXTURES / "spec_navigation" / "valid_manifest.html").read_bytes()
 
     result = process_capture(
@@ -79,6 +83,7 @@ def test_spec_navigation_accepted_saves_manifest(tmp_path: Path):
             raw_content=html,
             run_id="run-1",
         ),
+        context=AMAROK_CONTEXT,
         spec_key="spec-1",
     )
 
@@ -91,6 +96,7 @@ def test_spec_navigation_accepted_saves_manifest(tmp_path: Path):
 
 def test_group_detail_accepted_marks_checkpoint_accepted(tmp_path: Path):
     conn, blob_store, capture_repo = _setup(tmp_path)
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     html = (FIXTURES / "group_detail" / "valid_group_detail.html").read_bytes()
 
     result = process_capture(
@@ -105,6 +111,7 @@ def test_group_detail_accepted_marks_checkpoint_accepted(tmp_path: Path):
             raw_content=html,
             run_id="run-1",
         ),
+        context=AMAROK_CONTEXT,
         category_slug="front-axle-steering",
         group_id="407",
         spec_key="spec-1",
@@ -123,6 +130,7 @@ def test_challenge_capture_never_reaches_any_parser_and_group_detail_is_rejected
     tmp_path: Path,
 ):
     conn, blob_store, capture_repo = _setup(tmp_path)
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     html = (FIXTURES / "challenge_cloudflare.html").read_bytes()
 
     result = process_capture(
@@ -137,6 +145,7 @@ def test_challenge_capture_never_reaches_any_parser_and_group_detail_is_rejected
             raw_content=html,
             run_id="run-1",
         ),
+        context=AMAROK_CONTEXT,
         category_slug="front-axle-steering",
         group_id="407",
         spec_key="spec-1",
@@ -166,6 +175,7 @@ def test_challenge_capture_for_market_index_never_reaches_parser(tmp_path: Path)
             raw_content=html,
             run_id="run-1",
         ),
+    context=AMAROK_CONTEXT,
     )
 
     assert result.validation_outcome is ValidationOutcome.CHALLENGE

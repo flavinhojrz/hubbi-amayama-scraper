@@ -4,6 +4,8 @@ registrada (FR-001; quickstart.md Cenário 0)."""
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
+
 from amayama_scraper.checkpoint.collection_run import CollectionRun
 from amayama_scraper.ingestion.capture_input import RawCaptureInput
 from amayama_scraper.ingestion.capture_kind import CaptureKind
@@ -45,6 +47,7 @@ def test_market_index_capture_enumerates_and_registers_spec_identities(tmp_path:
             raw_content=html,
             run_id="run-1",
         ),
+        context=AMAROK_CONTEXT,
     )
 
     assert result.validation_outcome is ValidationOutcome.ACCEPTED

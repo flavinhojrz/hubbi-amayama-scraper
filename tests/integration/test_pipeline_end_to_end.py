@@ -5,6 +5,8 @@ sem rede (quickstart.md Cenário 10)."""
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
+
 from amayama_scraper.assets.fallback import resolve_image
 from amayama_scraper.checkpoint.collection_run import CollectionRun
 from amayama_scraper.domain.discovery import DiscoveredSpecEntry
@@ -86,7 +88,7 @@ def _collect_one_spec(conn, blob_store, capture_repo, run_id: str, spec_key: str
             spec_key=spec_key,
         ),
     ]
-    return run_collection(conn, blob_store, capture_repo, run_id, captures)
+    return run_collection(conn, blob_store, capture_repo, run_id, captures, context=AMAROK_CONTEXT)
 
 
 def test_full_offline_pipeline_market_index_to_equivalence_and_image_resolution(
@@ -112,6 +114,7 @@ def test_full_offline_pipeline_market_index_to_equivalence_and_image_resolution(
             raw_content=market_html,
             run_id="run-market",
         ),
+        context=AMAROK_CONTEXT,
     )
     assert market_result.routed_to_parser is True
     discovered = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")
@@ -121,10 +124,14 @@ def test_full_offline_pipeline_market_index_to_equivalence_and_image_resolution(
     # 2. SPEC_NAVIGATION + GROUP_DETAIL for TWO specs with IDENTICAL part content
     #    -> proves equivalence (EXACT) end to end
     for spec_key in ("spec-a", "spec-b"):
+        # source/manufacturer/vehicle_model/market precisam bater com
+        # AMAROK_CONTEXT (004: process_capture()/try_finalize_spec_entry()
+        # validam spec_key -> context antes de qualquer persistência).
         conn.execute(
             "INSERT OR IGNORE INTO spec_registry (stable_key, source, manufacturer, "
             "vehicle_model, market, model_code, amayama_catalog_id, production_period_raw, "
-            "source_url) VALUES (?, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H')",
+            "source_url) VALUES (?, 'AMAYAMA', 'VOLKSWAGEN', 'AMAROK', 'AMA-BR', "
+            "'E', 'F', 'G', 'H')",
             (spec_key,),
         )
     _collect_one_spec(conn, blob_store, capture_repo, "run-a", "spec-a", oem="1K0407151")

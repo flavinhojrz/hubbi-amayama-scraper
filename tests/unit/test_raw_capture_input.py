@@ -1,11 +1,16 @@
-"""T049 — RawCaptureInput contract (contracts/input-contracts.md §1)."""
+"""T049 — RawCaptureInput contract (contracts/input-contracts.md §1).
+
+T024 (002) — AcquisitionMode.AUTOMATED_BROWSER_CDP tem paridade total com
+MANUAL_BROWSER: nenhuma ramificação de comportamento depende do valor
+específico de acquisition_mode (data-model.md §0, research.md §6).
+"""
 
 from datetime import UTC, datetime
 
 import pytest
 
 from amayama_scraper.ingestion.capture_input import RawCaptureInput
-from amayama_scraper.ingestion.capture_kind import CaptureKind
+from amayama_scraper.ingestion.capture_kind import AcquisitionMode, CaptureKind
 
 
 def make_input(**overrides: object) -> RawCaptureInput:
@@ -44,3 +49,17 @@ def test_all_three_capture_kinds_valid(kind: CaptureKind) -> None:
 def test_empty_run_id_rejected():
     with pytest.raises(ValueError):
         make_input(run_id="")
+
+
+def test_automated_browser_cdp_acquisition_mode_exists_and_is_accepted() -> None:
+    capture = make_input(acquisition_mode=AcquisitionMode.AUTOMATED_BROWSER_CDP)
+    assert capture.acquisition_mode is AcquisitionMode.AUTOMATED_BROWSER_CDP
+
+
+def test_automated_browser_cdp_behaves_identically_to_manual_browser() -> None:
+    manual = make_input(acquisition_mode=AcquisitionMode.MANUAL_BROWSER)
+    automated = make_input(acquisition_mode=AcquisitionMode.AUTOMATED_BROWSER_CDP)
+    # Only acquisition_mode itself differs — no other field is affected by the value.
+    assert manual.raw_content == automated.raw_content
+    assert manual.capture_kind == automated.capture_kind
+    assert manual.source_url == automated.source_url

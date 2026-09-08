@@ -78,6 +78,68 @@ def get_spec_identity(conn: sqlite3.Connection, stable_key: str) -> SpecIdentity
     )
 
 
+def list_all_spec_identities(conn: sqlite3.Connection) -> list[SpecIdentity]:
+    """Todas as SpecIdentity já persistidas, independente de run_id (T028/T029, 002).
+
+    data-model.md §7, research.md §12 — leitura aditiva sobre spec_registry
+    já existente. Usada pelo driver de coleta (orchestration/collection_driver.py)
+    para saber quais specs já foram descobertas (nesta ou em execuções
+    anteriores) e decidir o que navegar a seguir.
+    """
+    rows = conn.execute("SELECT * FROM spec_registry ORDER BY stable_key").fetchall()
+    return [
+        SpecIdentity(
+            source=row["source"],
+            manufacturer=row["manufacturer"],
+            vehicle_model=row["vehicle_model"],
+            market=row["market"],
+            model_code=row["model_code"],
+            amayama_catalog_id=row["amayama_catalog_id"],
+            production_period_raw=row["production_period_raw"],
+            source_url=row["source_url"],
+            production_start=_date_from_str(row["production_start"]),
+            production_end=_date_from_str(row["production_end"]),
+            grade=row["grade"],
+            configuration=row["configuration"],
+        )
+        for row in rows
+    ]
+
+
+def list_by_scope(
+    conn: sqlite3.Connection, *, manufacturer: str, vehicle_model: str, market: str
+) -> list[SpecIdentity]:
+    """Todas as SpecIdentity de um escopo (manufacturer/vehicle_model/market), case-insensitive.
+
+    003-corpus-analysis-tool — leitura aditiva sobre spec_registry já existente,
+    usada pela ferramenta de análise para restringir a um escopo como
+    "VOLKSWAGEN / AMAROK / AMA-BR" sem exigir SQL manual do operador.
+    """
+    rows = conn.execute(
+        "SELECT * FROM spec_registry "
+        "WHERE UPPER(manufacturer) = UPPER(?) AND UPPER(vehicle_model) = UPPER(?) "
+        "AND UPPER(market) = UPPER(?) ORDER BY stable_key",
+        (manufacturer, vehicle_model, market),
+    ).fetchall()
+    return [
+        SpecIdentity(
+            source=row["source"],
+            manufacturer=row["manufacturer"],
+            vehicle_model=row["vehicle_model"],
+            market=row["market"],
+            model_code=row["model_code"],
+            amayama_catalog_id=row["amayama_catalog_id"],
+            production_period_raw=row["production_period_raw"],
+            source_url=row["source_url"],
+            production_start=_date_from_str(row["production_start"]),
+            production_end=_date_from_str(row["production_end"]),
+            grade=row["grade"],
+            configuration=row["configuration"],
+        )
+        for row in rows
+    ]
+
+
 def find_by_model_code_and_catalog_id(
     conn: sqlite3.Connection, model_code: str, amayama_catalog_id: str
 ) -> list[SpecIdentity]:

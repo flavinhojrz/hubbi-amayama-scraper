@@ -85,6 +85,24 @@ def _row_to_manifest(row: sqlite3.Row) -> SpecGroupManifest:
     )
 
 
+def list_for_spec(conn: sqlite3.Connection, spec_key: str) -> list[tuple[str, SpecGroupManifest]]:
+    """Todos os manifests de uma spec (com seu run_id), mais recente primeiro.
+
+    003-corpus-analysis-tool — leitura aditiva; diferente de get_authoritative(),
+    não filtra por run_id nem por autoridade — a ferramenta de análise decide,
+    entre os manifests retornados, qual é o vigente (mais recente com
+    manifest_complete=True) para reportar divergência/ausência. run_id é
+    preservado no retorno (Codex finding #2) porque grupos ACCEPTED só podem
+    ser comparados corretamente contra o universo esperado do MESMO run — um
+    grupo aceito num run antigo não prova que o run vigente o cobriu.
+    """
+    rows = conn.execute(
+        "SELECT * FROM spec_group_manifest WHERE spec_key = ? ORDER BY discovered_at DESC, id DESC",
+        (spec_key,),
+    ).fetchall()
+    return [(row["run_id"], _row_to_manifest(row)) for row in rows]
+
+
 def get_authoritative(
     conn: sqlite3.Connection, spec_key: str, run_id: str
 ) -> SpecGroupManifest | None:

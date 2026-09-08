@@ -5,6 +5,8 @@ coberto (data-model.md §17)."""
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
+
 from amayama_scraper.checkpoint.collection_run import CollectionRun
 from amayama_scraper.ingestion.capture_input import RawCaptureInput
 from amayama_scraper.ingestion.capture_kind import CaptureKind
@@ -36,10 +38,13 @@ GROUP_HTML = """
 def test_full_manifest_plus_group_detail_auto_finalizes(tmp_path: Path):
     conn = connect(str(tmp_path / "db.sqlite3"))
     run_migrations(conn)
+    # source/manufacturer/vehicle_model/market precisam bater com
+    # AMAROK_CONTEXT (004: process_capture()/try_finalize_spec_entry()
+    # validam spec_key -> context antes de qualquer persistência).
     conn.execute(
         "INSERT INTO spec_registry (stable_key, source, manufacturer, vehicle_model, "
         "market, model_code, amayama_catalog_id, production_period_raw, source_url) "
-        "VALUES ('spec-1', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H')"
+        "VALUES ('spec-1', 'AMAYAMA', 'VOLKSWAGEN', 'AMAROK', 'AMA-BR', 'E', 'F', 'G', 'H')"
     )
     save_collection_run(conn, CollectionRun(run_id="run-1"))
     blob_store = FilesystemRawBlobStore(tmp_path / "blobs", conn)
@@ -92,7 +97,9 @@ def test_full_manifest_plus_group_detail_auto_finalizes(tmp_path: Path):
         ),
     ]
 
-    results = run_collection(conn, blob_store, capture_repo, "run-1", captures)
+    results = run_collection(
+        conn, blob_store, capture_repo, "run-1", captures, context=AMAROK_CONTEXT
+    )
     assert len(results) == 2
     assert all(r.routed_to_parser for r in results)
 
