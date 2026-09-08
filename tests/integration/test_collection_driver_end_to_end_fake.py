@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -98,7 +99,7 @@ def _discover_and_get_key(conn, blob_store, capture_repo, run_id: str) -> str:
         blob_store,
         capture_repo,
         run_id=run_id,
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
     return find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -124,7 +125,7 @@ def test_full_pipeline_reaches_valid_snapshot_via_fake_transport_only(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
 
@@ -156,7 +157,7 @@ def test_second_run_skips_already_valid_spec_without_any_further_navigation(tmp_
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
     assert get_current_state(conn, key) is not None  # sanity: VALID from first run
@@ -174,7 +175,7 @@ def test_second_run_skips_already_valid_spec_without_any_further_navigation(tmp_
         blob_store,
         capture_repo,
         run_id="run-2",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
 
@@ -202,7 +203,7 @@ def test_force_recollects_an_already_valid_spec(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
     first_snapshot_id = get_current_state(conn, key).latest_snapshot_id
@@ -219,7 +220,7 @@ def test_force_recollects_an_already_valid_spec(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-2",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key], force=[key]),
     )
 

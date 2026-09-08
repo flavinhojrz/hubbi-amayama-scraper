@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -95,7 +96,7 @@ def test_challenge_on_second_spec_does_not_disturb_first_specs_valid_snapshot(tm
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
     key_62184 = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -112,7 +113,7 @@ def test_challenge_on_second_spec_does_not_disturb_first_specs_valid_snapshot(tm
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key_62184]),
     )
     current_62184_before = get_current_state(conn, key_62184)
@@ -139,7 +140,7 @@ def test_challenge_on_second_spec_does_not_disturb_first_specs_valid_snapshot(tm
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key_61189]),
         poll_interval=0.0,
         sleep=lambda _s: None,

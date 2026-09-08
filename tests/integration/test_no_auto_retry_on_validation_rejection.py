@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -95,7 +96,7 @@ def test_rejected_group_survives_n_passes_unretried_then_retried_explicitly(tmp_
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
     )
     key = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -116,7 +117,7 @@ def test_rejected_group_survives_n_passes_unretried_then_retried_explicitly(tmp_
             blob_store,
             capture_repo,
             run_id="run-1",
-            market_index_url=MARKET_INDEX_URL,
+            context=AMAROK_CONTEXT,
             filters=OperationalFilters(spec_filter=[key]),
         )
         unchanged = get_checkpoint_entry(conn, "run-1", key, "front-axle-steering", "407")
@@ -133,7 +134,7 @@ def test_rejected_group_survives_n_passes_unretried_then_retried_explicitly(tmp_
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key], retry_rejected=True),
     )
     retried = get_checkpoint_entry(conn, "run-1", key, "front-axle-steering", "407")

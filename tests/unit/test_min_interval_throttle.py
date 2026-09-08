@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -120,7 +121,7 @@ def test_second_navigation_sleeps_for_the_remaining_min_interval(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=None, limit_specs=1),
         min_interval=10.0,
         sleep=fake_sleep,
@@ -156,7 +157,7 @@ def test_first_navigation_never_waits(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
         min_interval=30.0,
         sleep=sleeps.append,
@@ -190,7 +191,7 @@ def test_zero_min_interval_never_sleeps(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
         min_interval=0.0,  # default
         sleep=sleeps.append,
@@ -226,7 +227,7 @@ def test_already_elapsed_time_reduces_or_removes_the_wait(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1, limit_groups=0),
         min_interval=10.0,  # less than the 15s already elapsed
         sleep=sleeps.append,
@@ -268,7 +269,7 @@ def test_min_interval_is_independent_of_transport_retry_backoff(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1, limit_groups=0),
         min_interval=5.0,
         poll_interval=999.0,  # would be obviously wrong if min_interval reused poll_interval

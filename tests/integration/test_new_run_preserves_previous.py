@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -95,7 +96,7 @@ def test_new_run_leaves_prior_incomplete_run_progress_intact_and_resumable(tmp_p
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
     )
     key = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -114,7 +115,7 @@ def test_new_run_leaves_prior_incomplete_run_progress_intact_and_resumable(tmp_p
         blob_store,
         capture_repo,
         run_id="run-2",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
 

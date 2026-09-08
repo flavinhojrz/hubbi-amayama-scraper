@@ -11,6 +11,7 @@ import contextlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import FIXED_SCOPE, CollectionRun
@@ -124,7 +125,7 @@ def test_run_completes_normally_and_stops_appearing_in_incomplete_runs(tmp_path)
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(),  # unfiltered — the whole known scope
     )
 
@@ -151,7 +152,7 @@ def test_subsequent_invocation_without_flags_creates_a_new_run_after_completion(
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(),
     )
 
@@ -190,7 +191,7 @@ def test_run_with_rejected_group_stays_incomplete(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(),
     )
 
@@ -216,7 +217,7 @@ def test_run_interrupted_by_exception_mid_loop_stays_incomplete(tmp_path):
             blob_store,
             capture_repo,
             run_id="run-1",
-            market_index_url=MARKET_INDEX_URL,
+            context=AMAROK_CONTEXT,
             filters=OperationalFilters(),
         )
 
@@ -247,7 +248,7 @@ def test_not_marked_complete_while_a_discovered_spec_is_still_untouched(tmp_path
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
     key_62184 = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -263,7 +264,7 @@ def test_not_marked_complete_while_a_discovered_spec_is_still_untouched(tmp_path
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key_62184]),
     )
 
@@ -284,7 +285,12 @@ def test_never_marked_complete_when_nothing_was_ever_discovered(tmp_path):
     # unusual; instead we exercise the guard directly at the unit level.
     from amayama_scraper.orchestration.collection_driver import _maybe_mark_run_completed
 
-    _maybe_mark_run_completed(conn, "run-1", lambda: datetime.now(UTC))
+    _maybe_mark_run_completed(
+        conn,
+        "run-1",
+        lambda: datetime.now(UTC),
+        context=AMAROK_CONTEXT,
+    )
 
     run = get_collection_run(conn, "run-1")
     assert run is not None

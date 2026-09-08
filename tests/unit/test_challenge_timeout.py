@@ -8,6 +8,7 @@ import contextlib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -57,6 +58,7 @@ def test_gives_up_only_this_unit_when_timeout_exceeded() -> None:
         run_id="run-1",
         capture_kind=CaptureKind.MARKET_INDEX,
         source_url_hint="https://x",
+        context=AMAROK_CONTEXT,
         poll_interval=0.0,
         sleep=lambda _s: None,
         timeout=12.0,
@@ -96,6 +98,7 @@ def test_waits_indefinitely_without_timeout_configured() -> None:
             run_id="run-1",
             capture_kind=CaptureKind.MARKET_INDEX,
             source_url_hint="https://x",
+            context=AMAROK_CONTEXT,
             poll_interval=0.0,
             sleep=_bounded_sleep,
             timeout=None,

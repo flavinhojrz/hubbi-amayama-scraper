@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT, register_spec
 from tests.unit.fakes import (
     FakeBrowserTransport,
 )
@@ -54,6 +55,7 @@ def test_wrong_page_after_resolution_becomes_requires_explicit_retry_not_accepte
     conn = connect(":memory:")
     run_migrations(conn)
     save_collection_run(conn, CollectionRun(run_id="run-1"))
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     blob_store = FilesystemRawBlobStore(tmp_path, conn)
     capture_repo = SqliteRawCaptureRepository(conn)
 
@@ -69,6 +71,7 @@ def test_wrong_page_after_resolution_becomes_requires_explicit_retry_not_accepte
         run_id="run-1",
         capture_kind=CaptureKind.GROUP_DETAIL,
         source_url_hint="https://x/engine/1",
+        context=AMAROK_CONTEXT,
         category_slug="engine",
         group_id="1",
         spec_key="spec-1",

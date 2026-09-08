@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -56,6 +57,7 @@ def test_chrome_lost_during_challenge_wait_propagates_and_writes_nothing_new():
             run_id="run-1",
             capture_kind=CaptureKind.MARKET_INDEX,
             source_url_hint="https://x",
+            context=AMAROK_CONTEXT,
             poll_interval=0.0,
             sleep=lambda _s: None,
             on_event=lambda event, **kw: events.append(event),

@@ -10,6 +10,7 @@ import contextlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -64,6 +65,7 @@ def test_many_challenge_polls_never_self_resolve_or_time_out() -> None:
             run_id="run-1",
             capture_kind=CaptureKind.MARKET_INDEX,
             source_url_hint="https://x",
+            context=AMAROK_CONTEXT,
             poll_interval=0.0,
             sleep=_sleep,
             timeout=None,

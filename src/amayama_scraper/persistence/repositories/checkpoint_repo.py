@@ -39,12 +39,13 @@ def list_incomplete_runs(conn: sqlite3.Connection, scope: str) -> list[Collectio
     """CollectionRun com scope == scope e completed_at IS NULL, mais antigo primeiro.
 
     T026/T027 (002) — data-model.md §7, DEC-005. Leitura aditiva sobre a
-    tabela collection_run já existente — nenhuma migration. Note que este
-    construtor de linha não usa `CollectionRun(...)` diretamente para
-    permitir refletir corretamente uma linha de escopo estrangeiro que só
-    pode existir via SQL direto (CollectionRun.__post_init__ recusaria
-    construí-la em Python) — o filtro `WHERE scope = ?` já a exclui do
-    resultado antes disso ser relevante.
+    tabela collection_run já existente — nenhuma migration. Desde 004,
+    `CollectionRun.__post_init__` valida `scope` via `parse_scope()`
+    (formato canônico de 4 componentes) em vez de aceitar qualquer string
+    não-vazia — uma linha com scope malformado (só possível via SQL direto
+    fora deste projeto) levantaria ao ser reconstruída aqui, o que é o
+    comportamento desejado (nunca operar silenciosamente sobre um scope
+    inválido).
     """
     rows = conn.execute(
         "SELECT * FROM collection_run WHERE scope = ? AND completed_at IS NULL ORDER BY started_at",

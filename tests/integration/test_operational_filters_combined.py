@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -99,7 +100,7 @@ def test_limit_specs_and_limit_groups_and_spec_filter_apply_simultaneously(tmp_p
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
     key_62184 = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -122,7 +123,7 @@ def test_limit_specs_and_limit_groups_and_spec_filter_apply_simultaneously(tmp_p
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(
             spec_filter=[key_62184, key_61189], limit_specs=1, limit_groups=1
         ),

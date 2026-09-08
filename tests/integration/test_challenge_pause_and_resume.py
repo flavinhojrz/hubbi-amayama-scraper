@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT, register_spec
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -46,6 +47,10 @@ def _conn():
     conn = connect(":memory:")
     run_migrations(conn)
     save_collection_run(conn, CollectionRun(run_id="run-1"))
+    # 004 hardening: process_capture()/try_finalize_spec_entry() exigem
+    # spec_key registrado e pertencente ao context — "spec-1" é o placeholder
+    # usado por este arquivo para exercitar SPEC_NAVIGATION/GROUP_DETAIL.
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     return conn
 
 
@@ -75,6 +80,7 @@ def test_never_marks_accepted_while_challenge_persists_then_resumes_automaticall
         run_id="run-1",
         capture_kind=CaptureKind.MARKET_INDEX,
         source_url_hint="https://x",
+        context=AMAROK_CONTEXT,
         poll_interval=0.0,
         sleep=_noop_sleep,
         on_event=lambda event, **kw: events.append((event, kw)),
@@ -108,6 +114,7 @@ def test_market_index_challenge_pauses_before_any_spec_discovered():
         run_id="run-1",
         capture_kind=CaptureKind.MARKET_INDEX,
         source_url_hint="https://x",
+        context=AMAROK_CONTEXT,
         poll_interval=0.0,
         sleep=_noop_sleep,
     )
@@ -182,6 +189,7 @@ def test_group_detail_challenge_does_not_affect_already_accepted_groups(tmp_path
         run_id="run-1",
         capture_kind=CaptureKind.GROUP_DETAIL,
         source_url_hint="https://x",
+        context=AMAROK_CONTEXT,
         category_slug="engine",
         group_id="paused-group",
         spec_key="spec-1",

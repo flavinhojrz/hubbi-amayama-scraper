@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -85,7 +86,7 @@ def test_spec_navigation_manifest_persisted_and_not_recaptured_on_second_pass(tm
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
     key = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -105,7 +106,7 @@ def test_spec_navigation_manifest_persisted_and_not_recaptured_on_second_pass(tm
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key], limit_groups=0),
     )
     manifest = get_authoritative(conn, key, "run-1")
@@ -122,7 +123,7 @@ def test_spec_navigation_manifest_persisted_and_not_recaptured_on_second_pass(tm
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key], limit_groups=0),
     )
     assert t2.navigate_calls == [MARKET_INDEX_URL]

@@ -4,20 +4,42 @@ concreto (research.md §5; verificado por tests/unit/test_cli_composition_root.p
 A CLI apenas: valida opções (cli/options.py), monta configuração, seleciona
 o modo (dry-run vs. execução real), chama orchestration/, retorna exit code.
 Nenhuma lógica de parsing EPC/domínio vive aqui.
+
+Exit codes documentados:
+    0 — sucesso (dry-run ou run real).
+    2 — --resume incompatível/ambíguo (IncompatibleResumeRunError/AmbiguousResumeError).
+    3 — Chrome/CDP inalcançável (ChromeNotReachableError).
+    4 — --manufacturer/--vehicle-model/--market inválido (InvalidScopeComponentError).
+    5 — CollectionRun.scope corrompido no banco (InvalidScopeError/
+        InvalidScopeComponentError ao reconstruir uma linha já persistida) —
+        falha fechada, nunca tratado silenciosamente como Amarok/default (004).
+    6 — --workers fora de [1, 4], ou --cdp-ports com número de portas
+        diferente de --workers (005 FR-001).
+    7 — pelo menos um worker filho encerrou com exitcode inesperado
+        (WorkerProcessFailedError, 005 hardening pós-review — nunca sucesso
+        silencioso).
 """
 
 from __future__ import annotations
 
+import argparse
+import multiprocessing
+import os
 import sqlite3
 import sys
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
-from amayama_scraper.checkpoint.collection_run import FIXED_SCOPE
 from amayama_scraper.checkpoint.resume import get_pending_groups
 from amayama_scraper.cli.options import parse_args
+from amayama_scraper.domain.collection_context import (
+    CollectionContext,
+    InvalidScopeComponentError,
+    InvalidScopeError,
+)
 from amayama_scraper.orchestration.collection_driver import (
     OperationalFilters,
     run_collection_driver,
@@ -28,6 +50,15 @@ from amayama_scraper.orchestration.run_selection import (
     AmbiguousResumeError,
     IncompatibleResumeRunError,
     select_run,
+)
+from amayama_scraper.orchestration.worker_pool import (
+    StopEventLike,
+    WorkerPoolConfig,
+    WorkerProcessArgs,
+    WorkerProcessFailedError,
+    run_pool,
+    run_worker_loop,
+    worker_id_for,
 )
 from amayama_scraper.persistence.adapters.filesystem_raw_blob_store import FilesystemRawBlobStore
 from amayama_scraper.persistence.adapters.sqlite_raw_capture_repository import (
@@ -42,26 +73,87 @@ from amayama_scraper.persistence.repositories.checkpoint_repo import (
 )
 from amayama_scraper.persistence.repositories.current_state_repo import get_current_state
 from amayama_scraper.persistence.repositories.manifest_repo import get_authoritative
-from amayama_scraper.persistence.repositories.spec_registry_repo import list_all_spec_identities
-from amayama_scraper.transport.chrome_cdp_adapter import ChromeCdpTransport
-from amayama_scraper.transport.errors import ChromeNotReachableError
-
-#: Ponto de entrada de descoberta desta feature — o mercado/modelo fixo
-#: (Amarok/AMA-BR, mesmo escopo de FIXED_SCOPE), não uma spec/catalog_id
-#: específica (FR-009).
-MARKET_INDEX_URL = (
-    "https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br"
+from amayama_scraper.persistence.repositories.spec_registry_repo import list_by_scope
+from amayama_scraper.transport.chrome_cdp_adapter import (
+    ChromeCdpTransport,
+    resolve_cdp_host,
+    resolve_cdp_port,
 )
+from amayama_scraper.transport.errors import ChromeNotReachableError
 
 DEFAULT_DB_PATH = "amayama.db"
 DEFAULT_RAW_ROOT = "amayama_raw"
 
 
-def _read_only_repos(conn: sqlite3.Connection) -> ReadOnlyRepos:
+def _resolve_cdp_ports(args: argparse.Namespace) -> list[int]:
+    """005 FR-042: uma porta por worker — lista explícita (`--cdp-ports`) ou
+    derivada de `--cdp-port`/`AMAYAMA_CDP_PORT`/9222 como base + índice do
+    worker (plan.md "Decisões de design" #2)."""
+    if args.cdp_ports:
+        return [int(part.strip()) for part in args.cdp_ports.split(",")]
+    base = resolve_cdp_port(args.cdp_port)
+    return [base + i for i in range(args.workers)]
+
+
+def _worker_process_entrypoint(worker_args: WorkerProcessArgs, stop_event: StopEventLike) -> None:
+    """Entrypoint do processo filho (`multiprocessing`, contexto `spawn` —
+    contracts/worker-pool-contract.md §0/§2). Único lugar, junto com
+    `main()` abaixo, que constrói um `ChromeCdpTransport` real para um
+    worker — `orchestration/worker_pool.py` nunca importa
+    `transport.chrome_cdp_adapter` (tests/unit/test_cli_composition_root.py).
+
+    `stop_event` (005 hardening, BLOCKER 3 — shutdown determinístico):
+    checado por `run_worker_loop()` a cada iteração — sinalizado pelo
+    processo pai (`run_pool()`) em `finally`, garante encerramento
+    cooperativo entre specs em vez de depender só de `terminate()`."""
+    conn = connect(worker_args.db_path)
+    run_migrations(conn)
+    blob_store = FilesystemRawBlobStore(Path(worker_args.raw_root), conn)
+    capture_repo = SqliteRawCaptureRepository(conn)
+    transport = ChromeCdpTransport(host=worker_args.cdp_host, port=worker_args.cdp_port)
+    worker_id = worker_id_for(worker_args.run_id, worker_args.worker_index, os.getpid())
+    on_event = make_terminal_reporter(run_id=f"{worker_args.run_id}:{worker_id}")
+    run_worker_loop(
+        transport,
+        conn,
+        blob_store,
+        capture_repo,
+        run_id=worker_args.run_id,
+        context=worker_args.context,
+        worker_id=worker_id,
+        filters=worker_args.filters,
+        pool_config=worker_args.pool_config,
+        pool_session_id=worker_args.pool_session_id,
+        poll_interval=worker_args.poll_interval,
+        challenge_timeout=worker_args.challenge_timeout,
+        min_interval=worker_args.min_interval,
+        on_event=on_event,
+        stop_event=stop_event,
+    )
+
+
+def _spawn_worker_process(
+    target: Callable[[WorkerProcessArgs, StopEventLike], None],
+    worker_args: WorkerProcessArgs,
+    stop_event: StopEventLike,
+) -> multiprocessing.process.BaseProcess:
+    ctx = multiprocessing.get_context("spawn")
+    return ctx.Process(target=target, args=(worker_args, stop_event))
+
+
+def _read_only_repos(
+    conn: sqlite3.Connection, *, manufacturer: str, vehicle_model: str, market: str
+) -> ReadOnlyRepos:
     return ReadOnlyRepos(
         get_collection_run=partial(get_collection_run, conn),
         list_incomplete_runs=partial(list_incomplete_runs, conn),
-        list_all_spec_identities=partial(list_all_spec_identities, conn),
+        list_all_spec_identities=partial(
+            list_by_scope,
+            conn,
+            manufacturer=manufacturer,
+            vehicle_model=vehicle_model,
+            market=market,
+        ),
         get_current_state=partial(get_current_state, conn),
         get_authoritative_manifest=partial(get_authoritative, conn),
         get_pending_groups=partial(get_pending_groups, conn),
@@ -146,40 +238,85 @@ def _print_plan(plan: OperationalPlan) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
 
+    # 005 FR-001: validado antes de qualquer navegação/escrita — mesmo
+    # espírito de fail-fast de --manufacturer/--vehicle-model/--market (004).
+    if not 1 <= args.workers <= 4:
+        print(f"error: --workers must be between 1 and 4, got {args.workers}", file=sys.stderr)
+        return 6
+
+    cdp_ports: list[int] | None = None
+    if args.workers > 1:
+        try:
+            cdp_ports = _resolve_cdp_ports(args)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 6
+        if len(cdp_ports) != args.workers:
+            print(
+                f"error: --cdp-ports must have exactly --workers ({args.workers}) entries, "
+                f"got {len(cdp_ports)}",
+                file=sys.stderr,
+            )
+            return 6
+
     db_path = args.db_path or DEFAULT_DB_PATH
+
+    try:
+        context = CollectionContext(
+            manufacturer=args.manufacturer, vehicle_model=args.vehicle_model, market=args.market
+        )
+    except InvalidScopeComponentError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 4
+
+    scope = context.scope()
 
     if args.dry_run:
         # Blocker 1 (Codex) — DEC-009: --dry-run nunca cria DB, nunca cria
         # raw_root, nunca roda migration, nunca escreve nada. Se o DB
         # informado já existir, abre-o genuinamente read-only; se não
         # existir, trata como estado vazio sem tocar o filesystem.
-        if Path(db_path).exists():
-            conn = _connect_read_only(db_path)
-            try:
-                repos = _read_only_repos(conn)
+        try:
+            if Path(db_path).exists():
+                conn = _connect_read_only(db_path)
+                try:
+                    repos = _read_only_repos(
+                        conn,
+                        manufacturer=context.manufacturer,
+                        vehicle_model=context.vehicle_model,
+                        market=context.market,
+                    )
+                    plan = plan_operation(
+                        repos,
+                        resume_run_id=args.resume,
+                        new_run=args.new_run,
+                        scope=scope,
+                        limit_specs=args.limit_specs,
+                        limit_groups=args.limit_groups,
+                        spec_filter=args.spec,
+                        force=args.force,
+                    )
+                finally:
+                    conn.close()
+            else:
                 plan = plan_operation(
-                    repos,
+                    _empty_read_only_repos(),
                     resume_run_id=args.resume,
                     new_run=args.new_run,
-                    scope=FIXED_SCOPE,
+                    scope=scope,
                     limit_specs=args.limit_specs,
                     limit_groups=args.limit_groups,
                     spec_filter=args.spec,
                     force=args.force,
                 )
-            finally:
-                conn.close()
-        else:
-            plan = plan_operation(
-                _empty_read_only_repos(),
-                resume_run_id=args.resume,
-                new_run=args.new_run,
-                scope=FIXED_SCOPE,
-                limit_specs=args.limit_specs,
-                limit_groups=args.limit_groups,
-                spec_filter=args.spec,
-                force=args.force,
-            )
+        except (InvalidScopeError, InvalidScopeComponentError) as exc:
+            # 004, item 5: um CollectionRun.scope corrompido no banco (nunca
+            # escrito por este projeto — só via SQL direto externo) nunca é
+            # silenciosamente tratado como Amarok/default. Falha fechada,
+            # nenhum traceback cru, nenhuma escrita (--dry-run já não
+            # escreve nada, DEC-009).
+            print(f"error: corrupted CollectionRun.scope in database: {exc}", file=sys.stderr)
+            return 5
         _print_plan(plan)
         return 0
 
@@ -195,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
         selection = select_run(
             resume_run_id=args.resume,
             new_run=args.new_run,
-            scope=FIXED_SCOPE,
+            scope=scope,
             now=datetime.now(UTC),
             run_id_factory=lambda: str(uuid.uuid4()),
             get_collection_run=partial(get_collection_run, conn),
@@ -205,6 +342,77 @@ def main(argv: list[str] | None = None) -> int:
     except (IncompatibleResumeRunError, AmbiguousResumeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    except (InvalidScopeError, InvalidScopeComponentError) as exc:
+        # 004, item 5: mesma falha fechada do ramo --dry-run — um scope
+        # corrompido lido do banco (via get_collection_run/list_incomplete_runs
+        # dentro de select_run()) nunca vira Amarok/default silenciosamente,
+        # e nada foi escrito até aqui (migrations à parte, idempotentes).
+        print(f"error: corrupted CollectionRun.scope in database: {exc}", file=sys.stderr)
+        return 5
+
+    filters = OperationalFilters(
+        spec_filter=args.spec,
+        limit_specs=args.limit_specs,
+        limit_groups=args.limit_groups,
+        force=args.force or [],
+        retry_rejected=args.retry_rejected,
+    )
+
+    # 005 FR-003: --workers 1 (default) é EXATAMENTE o caminho de código
+    # legado abaixo — nenhuma linha relacionada a worker_pool é executada
+    # neste ramo. --workers N > 1 é o único caminho que usa run_pool().
+    if args.workers > 1:
+        assert cdp_ports is not None  # computed and validated near the top of main()
+        cdp_host = resolve_cdp_host(args.cdp_host)
+        try:
+            transport = ChromeCdpTransport(
+                host=cdp_host,
+                port=cdp_ports[0],
+                max_retries=args.transport_max_retries,
+                backoff_seconds=args.transport_backoff_seconds,
+            )
+        except ChromeNotReachableError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 3
+
+        pool_config = WorkerPoolConfig(
+            workers=args.workers,
+            lease_seconds=args.lease_seconds,
+            challenge_window_seconds=args.challenge_window_seconds,
+            challenge_threshold=args.challenge_threshold,
+            stability_seconds=args.stability_seconds,
+            metrics_interval_seconds=args.metrics_interval_seconds,
+        )
+        on_event = make_terminal_reporter(run_id=selection.run.run_id)
+        stop_event = multiprocessing.get_context("spawn").Event()
+        try:
+            run_pool(
+                transport,
+                conn,
+                blob_store,
+                capture_repo,
+                run_id=selection.run.run_id,
+                context=context,
+                filters=filters,
+                pool_config=pool_config,
+                db_path=db_path,
+                raw_root=str(raw_root),
+                cdp_host=cdp_host,
+                cdp_ports=cdp_ports,
+                worker_target=_worker_process_entrypoint,
+                process_factory=_spawn_worker_process,
+                stop_event=stop_event,
+                poll_interval=args.challenge_poll_interval,
+                challenge_timeout=args.challenge_timeout,
+                min_interval=args.min_interval,
+                on_event=on_event,
+            )
+        except WorkerProcessFailedError as exc:
+            # 005 hardening (HIGH — exitcode de worker): nunca sucesso
+            # silencioso quando um worker filho falhou inesperadamente.
+            print(f"error: {exc}", file=sys.stderr)
+            return 7
+        return 0
 
     try:
         transport = ChromeCdpTransport(
@@ -217,13 +425,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 3
 
-    filters = OperationalFilters(
-        spec_filter=args.spec,
-        limit_specs=args.limit_specs,
-        limit_groups=args.limit_groups,
-        force=args.force or [],
-        retry_rejected=args.retry_rejected,
-    )
     on_event = make_terminal_reporter(run_id=selection.run.run_id)
     run_collection_driver(
         transport,
@@ -231,7 +432,7 @@ def main(argv: list[str] | None = None) -> int:
         blob_store,
         capture_repo,
         run_id=selection.run.run_id,
-        market_index_url=MARKET_INDEX_URL,
+        context=context,
         filters=filters,
         poll_interval=args.challenge_poll_interval,
         challenge_timeout=args.challenge_timeout,

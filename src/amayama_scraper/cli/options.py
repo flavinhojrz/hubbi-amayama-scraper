@@ -16,12 +16,35 @@ from amayama_scraper.transport.port import DEFAULT_BACKOFF_SECONDS, DEFAULT_MAX_
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="amayama-scraper",
-        description="Scraper real Amarok AMA-BR — navegador assistido, human-in-the-loop e resume.",
+        description=(
+            "Scraper real Amayama — navegador assistido, human-in-the-loop e resume. "
+            "Reutilizável para qualquer modelo/mercado Volkswagen via "
+            "--manufacturer/--vehicle-model/--market (default: VOLKSWAGEN/AMAROK/AMA-BR)."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser(
         "run", help="Executa (ou planeja, com --dry-run) uma coleta."
+    )
+
+    run_parser.add_argument(
+        "--manufacturer",
+        default="VOLKSWAGEN",
+        metavar="MANUFACTURER",
+        help="Fabricante a coletar (default: VOLKSWAGEN).",
+    )
+    run_parser.add_argument(
+        "--vehicle-model",
+        default="AMAROK",
+        metavar="VEHICLE_MODEL",
+        help="Modelo do veículo a coletar (default: AMAROK).",
+    )
+    run_parser.add_argument(
+        "--market",
+        default="AMA-BR",
+        metavar="MARKET",
+        help="Mercado Amayama a coletar (default: AMA-BR).",
     )
 
     run_selection_group = run_parser.add_mutually_exclusive_group()
@@ -92,6 +115,64 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     run_parser.add_argument("--db-path", default=None, metavar="PATH")
     run_parser.add_argument("--raw-root", default=None, metavar="PATH")
+
+    run_parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Paralelismo controlado por spec, 1-4 (default: 1 — comportamento legado "
+            "bit-a-bit, 005 FR-001/FR-003)."
+        ),
+    )
+    run_parser.add_argument(
+        "--cdp-ports",
+        default=None,
+        metavar="PORT,PORT,...",
+        help=(
+            "Uma porta CDP por worker (--workers N), separadas por vírgula — um Chrome real "
+            "distinto por porta (005 FR-042). Default: deriva de --cdp-port/AMAYAMA_CDP_PORT/9222 "
+            "como porta-base, uma porta consecutiva por índice de worker."
+        ),
+    )
+    run_parser.add_argument(
+        "--lease-seconds",
+        type=float,
+        default=120.0,
+        metavar="SECONDS",
+        help=(
+            "Duração do lease de claim por spec antes de se tornar recuperável (005 FR-021/FR-023)."
+        ),
+    )
+    run_parser.add_argument(
+        "--challenge-window-seconds",
+        type=float,
+        default=300.0,
+        metavar="SECONDS",
+        help="Janela de observação de challenges para o rate limiter adaptativo (005 FR-063).",
+    )
+    run_parser.add_argument(
+        "--challenge-threshold",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Número de challenges na janela que aciona uma redução de concorrência (005 FR-063).",
+    )
+    run_parser.add_argument(
+        "--stability-seconds",
+        type=float,
+        default=600.0,
+        metavar="SECONDS",
+        help="Período sem challenge exigido para recuperar 1 nível de concorrência (005 FR-064).",
+    )
+    run_parser.add_argument(
+        "--metrics-interval-seconds",
+        type=float,
+        default=30.0,
+        metavar="SECONDS",
+        help="Intervalo entre relatórios de métricas do orquestrador (005 FR-070).",
+    )
 
     return parser
 

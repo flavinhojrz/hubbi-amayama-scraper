@@ -118,18 +118,14 @@ def test_explicit_resume_of_nonexistent_run_raises_incompatible() -> None:
 
 
 def test_explicit_resume_of_different_scope_raises_incompatible() -> None:
-    # CollectionRun itself pins scope to FIXED_SCOPE; a foreign-scope run can
-    # only be represented via a plain object here (pure function under test
-    # only compares .scope/.completed_at, never re-validates via the dataclass).
-    class _ForeignScopeRun:
-        run_id = "run-foreign"
-        scope = "AMAYAMA:VOLKSWAGEN:OTHER-MODEL:AMA-BR"
-        completed_at = None
-
-    store = _FakeRunStore()
-    store._by_id["run-foreign"] = _ForeignScopeRun()  # type: ignore[assignment]
+    """Também cobre o requisito multi-modelo: --resume de um run de outro
+    modelo/mercado (scope diferente) é sempre rejeitado, nunca retomado."""
+    other_model_run = CollectionRun(
+        run_id="run-other-model", scope="AMAYAMA:VOLKSWAGEN:OTHER-MODEL:AMA-BR", started_at=_NOW
+    )
+    store = _FakeRunStore([other_model_run])
     with pytest.raises(IncompatibleResumeRunError):
-        _select(store, resume_run_id="run-foreign")
+        _select(store, resume_run_id="run-other-model")
 
 
 # T038 — --new-run sempre cria, mesmo com incompleta compatível existente

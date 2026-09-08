@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -91,7 +92,7 @@ def test_valid_spec_is_skipped_entirely_on_a_later_invocation(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
     )
     key = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -108,7 +109,7 @@ def test_valid_spec_is_skipped_entirely_on_a_later_invocation(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
     assert t2.navigate_calls == [MARKET_INDEX_URL]
@@ -152,7 +153,7 @@ def test_accepted_group_is_not_renavigated_in_a_later_pass_of_the_same_spec(tmp_
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1, limit_groups=1),
     )
     key = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -170,7 +171,7 @@ def test_accepted_group_is_not_renavigated_in_a_later_pass_of_the_same_spec(tmp_
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
     group_level_calls = [u for u in t2.navigate_calls if u != MARKET_INDEX_URL]

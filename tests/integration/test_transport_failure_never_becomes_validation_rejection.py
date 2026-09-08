@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tests.support import AMAROK_CONTEXT, register_spec
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -61,6 +62,7 @@ def _attempt_group_detail(
         capture_repo,
         run_id,
         capture_input,
+        context=AMAROK_CONTEXT,
         category_slug=category_slug,
         group_id=group_id,
         spec_key=spec_key,
@@ -72,6 +74,7 @@ def test_transport_failure_never_calls_process_capture_or_writes_checkpoint():
     conn = connect(":memory:")
     run_migrations(conn)
     save_collection_run(conn, CollectionRun(run_id="run-1"))
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     blob_store = InMemoryRawBlobStore()
     capture_repo = InMemoryRawCaptureRepository()
 
@@ -105,6 +108,7 @@ def test_transport_failure_after_a_prior_rejection_leaves_the_rejection_untouche
     conn = connect(":memory:")
     run_migrations(conn)
     save_collection_run(conn, CollectionRun(run_id="run-1"))
+    register_spec(conn, "spec-1", AMAROK_CONTEXT)
     blob_store = InMemoryRawBlobStore()
     capture_repo = InMemoryRawCaptureRepository()
 

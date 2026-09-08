@@ -7,6 +7,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -62,6 +63,7 @@ def test_diverging_effective_url_is_reported_but_does_not_block_acceptance() -> 
         run_id="run-1",
         capture_kind=CaptureKind.MARKET_INDEX,
         source_url_hint="https://x/expected",
+        context=AMAROK_CONTEXT,
         poll_interval=0.0,
         sleep=lambda _s: None,
         on_event=lambda event, **kw: events.append((event, kw)),

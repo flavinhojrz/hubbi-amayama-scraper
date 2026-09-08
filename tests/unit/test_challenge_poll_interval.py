@@ -7,6 +7,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import (
     FakeBrowserTransport,
     InMemoryRawBlobStore,
@@ -54,6 +55,7 @@ def test_poll_interval_is_respected_between_reads() -> None:
         run_id="run-1",
         capture_kind=CaptureKind.MARKET_INDEX,
         source_url_hint="https://x",
+        context=AMAROK_CONTEXT,
         poll_interval=3.5,
         sleep=sleeps.append,
     )

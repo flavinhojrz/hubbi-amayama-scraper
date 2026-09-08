@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -104,7 +105,7 @@ def test_only_manifest_groups_are_navigated_and_rejection_is_not_retried_automat
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=0),
     )
     key = find_by_model_code_and_catalog_id(conn, "S7BC8A", "62184")[0].stable_key()
@@ -126,7 +127,7 @@ def test_only_manifest_groups_are_navigated_and_rejection_is_not_retried_automat
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
 
@@ -149,7 +150,7 @@ def test_only_manifest_groups_are_navigated_and_rejection_is_not_retried_automat
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key]),
     )
     assert t2.navigate_calls == [
@@ -168,7 +169,7 @@ def test_only_manifest_groups_are_navigated_and_rejection_is_not_retried_automat
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(spec_filter=[key], retry_rejected=True),
     )
     retried = get_checkpoint_entry(conn, "run-1", key, "engine", "100")

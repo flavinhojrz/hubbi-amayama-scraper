@@ -21,6 +21,20 @@ def test_run_with_no_flags_uses_defaults() -> None:
     assert args.spec is None
     assert args.retry_rejected is False
     assert args.force is None
+    # Defaults preservam compatibilidade com o comportamento histórico
+    # (Amarok/AMA-BR) da feature 002 antes da evolução multi-modelo.
+    assert args.manufacturer == "VOLKSWAGEN"
+    assert args.vehicle_model == "AMAROK"
+    assert args.market == "AMA-BR"
+
+
+def test_manufacturer_vehicle_model_and_market_are_overridable() -> None:
+    args = parse_args(
+        ["run", "--manufacturer", "VOLKSWAGEN", "--vehicle-model", "GOL", "--market", "AMA-BR"]
+    )
+    assert args.manufacturer == "VOLKSWAGEN"
+    assert args.vehicle_model == "GOL"
+    assert args.market == "AMA-BR"
 
 
 def test_resume_accepts_run_id() -> None:

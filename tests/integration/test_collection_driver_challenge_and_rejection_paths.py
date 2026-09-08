@@ -7,6 +7,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from tests.support import AMAROK_CONTEXT
 from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.checkpoint.collection_run import CollectionRun
@@ -91,7 +92,7 @@ def test_market_index_challenge_timeout_aborts_run_without_discovering_anything(
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(),
         poll_interval=0.0,
         sleep=lambda _s: None,
@@ -122,7 +123,7 @@ def test_spec_navigation_challenge_timeout_skips_only_that_spec(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
         poll_interval=0.0,
         sleep=lambda _s: None,
@@ -151,7 +152,7 @@ def test_spec_navigation_rejected_without_challenge_is_reported_and_skipped(tmp_
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
         on_event=lambda event, **kw: events.append(event),
     )
@@ -181,7 +182,7 @@ def test_group_detail_challenge_timeout_skips_only_that_group(tmp_path):
         blob_store,
         capture_repo,
         run_id="run-1",
-        market_index_url=MARKET_INDEX_URL,
+        context=AMAROK_CONTEXT,
         filters=OperationalFilters(limit_specs=1),
         poll_interval=0.0,
         sleep=lambda _s: None,
