@@ -26,7 +26,16 @@ VARIATION_DETAILS = ".epcVariation__details"
 SCHEMAS_CONTAINER = ".epcSchema__schemas"
 SCHEMA = ".epcSchema__schema[data-id]"
 IMAGE_DESCRIPTION = ".img__description"
-IMAGE = ".imgMap img[src]"
+# Bug fix (2026-09-10, evidência real): a captura via navigate() completo
+# (JS executado) embrulha o <img> num <div class="imgMap"> extra (overlay
+# de canvas/hover) — MAS a captura via fetch() em lote (técnica hoje usada
+# por padrão para GROUP_DETAIL, ver browser_fetch_js.py) nunca executa esse
+# JS: o <img class="imgMap" src=...> não tem nenhum wrapper do mesmo nome.
+# ".imgMap img[src]" só casava o primeiro caso — em produção (fetch em
+# lote) NUNCA encontrava imagem nenhuma. União cobre ambas as estruturas
+# reais, sem quebrar a fixture sintética antiga (div.imgMap > img sem
+# classe própria).
+IMAGE = "img.imgMap[src], .imgMap img[src]"
 ENTRIES_TABLE = ".entriesTable"
 PNC_ROW = "tr[data-key]"
 GROUP_HEADER = ".entriesPncTable__groupHeader"

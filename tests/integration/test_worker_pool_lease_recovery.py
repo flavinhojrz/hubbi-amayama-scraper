@@ -121,6 +121,9 @@ def test_expired_lease_is_recovered_without_losing_accepted_progress(tmp_path: P
     capture_repo = SqliteRawCaptureRepository(conn)
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MANIFEST_HTML, spec.source_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     after_expiry = t0 + timedelta(seconds=61)

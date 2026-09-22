@@ -110,6 +110,9 @@ def test_challenge_decrements_and_stability_period_recovers_concurrency(tmp_path
     transport.queue_navigate(_capture(CHALLENGE_HTML, spec.source_url))
     # ...o poll seguinte (current_capture, dentro de await_challenge_resolution) resolve.
     transport.queue_current_capture(_capture(MANIFEST_HTML, spec.source_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_worker_loop(

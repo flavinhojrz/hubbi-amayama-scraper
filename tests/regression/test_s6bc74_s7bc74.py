@@ -5,15 +5,19 @@ clarification) — see test_2hbc3x_s1bc3x.py module docstring for the full
 rationale on why this never claims WHOLE-SPEC EXACT and never routes
 around `process_capture()`/`classify_capture()`.
 
-Real evidence for `engine/100` and `front-axle-steering/407` does NOT
-show any image on either side (both empty) — the "difference is only in
-image" scenario described by the original task wording is not sustained
-by those two groups, and this file does not force it. `body/800` is also
-image-empty on both sides. The real group that *does* sustain the image
-scenario is `access-infotainment-miscell/019` (schemas `19010`/`19011`):
-identical parts, asymmetric image presence — proven below using the same
-real, independent fingerprint channels the Constitution (§8, §10)
-mandates parts/images never share.
+Bug fix (2026-09-10): `parsing/selectors.py::IMAGE` (`.imgMap img[src]`)
+never matched real fetch()-captured group pages — the real `<img>` itself
+carries class `imgMap` there, with no wrapping element of the same class
+(that wrapper only appears in a full-navigate()+JS capture). Every group
+below was previously (mis)reported as image-empty on both sides purely
+because of that selector bug — corrected here against the real fixtures:
+`engine/100`, `front-axle-steering/407`, `body/800` and
+`access-infotainment-miscell/019` all genuinely carry the same,
+identical image on both `s6bc74`/`s7bc74` sides (never asymmetric — the
+originally documented "asymmetry" on `019` was itself an artifact of the
+same bug, not real site content). What the second half of this file still
+verifies is real and unaffected by the fix: images (now correctly
+extracted) never participate in parts equivalence (Constitution §8, §10).
 """
 
 from __future__ import annotations
@@ -39,7 +43,18 @@ def test_manifests_are_real_complete_and_coherent_with_sample():
         result = load_manifest(spec_slug, spec_key)
 
         assert result.critical_error is None
-        assert result.manifest.manifest_complete is True
+        # Bug fix (manifest truncado): a single-page parse is never
+        # authoritatively complete by itself anymore (parsing/
+        # spec_group_manifest.py) — completeness now requires visiting every
+        # declared category on its own URL (orchestration/collection_driver.py
+        # ::discover_spec_manifest()), out of scope for this sample-level
+        # regression (see module docstring). What real evidence DOES support
+        # here: every category declared in this real page's own nav is
+        # backed by at least one card ON THIS SAME PAGE — this specific real
+        # capture was not itself truncated.
+        assert result.manifest.manifest_complete is False
+        declared = result.manifest.validation_evidence["declared_category_urls"]
+        assert {c.category_slug for c in result.manifest.categories} == set(declared)
         assert sum(len(c.groups) for c in result.manifest.categories) == 108
 
         expected = result.manifest.expected_group_keys()
@@ -59,15 +74,15 @@ def test_sample_level_exact_parts_across_sample():
         cat_a = group_detail_to_category(category_slug, group_id, a)
         cat_b = group_detail_to_category(category_slug, group_id, b)
 
-        # SAMPLE-LEVEL EXACT for every sampled group, including the one that
-        # also carries the real image asymmetry (proven separately below).
+        # SAMPLE-LEVEL EXACT for every sampled group, regardless of the
+        # (now correctly extracted, always symmetric) image evidence
+        # checked separately below.
         assert category_fingerprint(cat_a) == category_fingerprint(cat_b)
 
 
-def test_engine_and_front_axle_and_body_have_no_image_evidence_on_either_side():
-    """Reports the real evidence rather than forcing the "image difference"
-    scenario onto groups that do not sustain it (per the 2026-08-27
-    clarification)."""
+def test_engine_and_front_axle_and_body_have_symmetric_image_evidence_on_both_sides():
+    """Corrected real evidence (2026-09-10, see module docstring): all three
+    groups carry the same, non-empty image on both sides — never empty."""
     for category_slug, group_id in (
         ("engine", "100"),
         ("front-axle-steering", "407"),
@@ -75,13 +90,13 @@ def test_engine_and_front_axle_and_body_have_no_image_evidence_on_either_side():
     ):
         a = load_group_detail("s6bc74", category_slug, group_id)
         b = load_group_detail("s7bc74", category_slug, group_id)
-        a_has_image = any(p.image_url for s in a.schemas for p in s.parts)
-        b_has_image = any(p.image_url for s in b.schemas for p in s.parts)
-        assert a_has_image is False
-        assert b_has_image is False
+        a_images = {p.image_url for s in a.schemas for p in s.parts}
+        b_images = {p.image_url for s in b.schemas for p in s.parts}
+        assert a_images and all(a_images)
+        assert a_images == b_images
 
 
-def test_access_infotainment_miscell_019_image_asymmetry_does_not_affect_parts_equality():
+def test_access_infotainment_miscell_019_image_presence_does_not_affect_parts_equality():
     a = load_group_detail("s6bc74", "access-infotainment-miscell", "019")
     b = load_group_detail("s7bc74", "access-infotainment-miscell", "019")
 
@@ -97,14 +112,14 @@ def test_access_infotainment_miscell_019_image_asymmetry_does_not_affect_parts_e
     for schema_id in IMAGE_ASYMMETRIC_SCHEMAS:
         schema_a, schema_b = a_by_schema[schema_id], b_by_schema[schema_id]
 
-        # Real image asymmetry: s6bc74 has none, s7bc74 has one, on both
-        # asymmetric schemas.
-        assert all(p.image_url is None for p in schema_a.parts)
-        assert all(p.image_url for p in schema_b.parts)
+        # Corrected real evidence: both sides carry the same image on this
+        # schema (see module docstring) — the originally documented
+        # asymmetry was a selector bug, not real site content.
+        assert all(p.image_url for p in schema_a.parts)
+        assert {p.image_url for p in schema_a.parts} == {p.image_url for p in schema_b.parts}
 
         # part_fingerprint() never includes image_url (Constitution §10) —
-        # matching parts (by pnc) fingerprint identically despite the
-        # image_url difference on the raw Part itself.
+        # matching parts (by pnc) fingerprint identically regardless.
         parts_a = {p.position_pnc: p.to_part() for p in schema_a.parts}
         parts_b = {p.position_pnc: p.to_part() for p in schema_b.parts}
         assert set(parts_a) == set(parts_b)
@@ -117,11 +132,10 @@ def test_access_infotainment_miscell_019_image_asymmetry_does_not_affect_parts_e
     cat_b = group_detail_to_category("access-infotainment-miscell", "019", b)
     assert category_fingerprint(cat_a) == category_fingerprint(cat_b)
 
-    # ...while the independent image channel (Constitution §8: "Imagens não
-    # participam da decisão de equivalência de peças") genuinely differs,
-    # proving the asset difference is real and does not leak into parts
-    # equivalence.
+    # ...and the independent image channel (Constitution §8: "Imagens não
+    # participam da decisão de equivalência de peças") is real, non-empty,
+    # and identical on both sides — never leaking into parts equivalence.
     tree_a, tree_b = (cat_a,), (cat_b,)
-    assert image_hash(tree_a) == EMPTY_IMAGE_HASH
+    assert image_hash(tree_a) != EMPTY_IMAGE_HASH
     assert image_hash(tree_b) != EMPTY_IMAGE_HASH
-    assert image_hash(tree_a) != image_hash(tree_b)
+    assert image_hash(tree_a) == image_hash(tree_b)

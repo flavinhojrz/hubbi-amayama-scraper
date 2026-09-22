@@ -1,0 +1,298 @@
+{
+  "files": {
+    "csv": "C:\\Users\\flavi\\dev\\hubbi\\hubbi-amayama-scraper\\exports\\hubbi_volkswagen_full.csv",
+    "conflicts": "C:\\Users\\flavi\\dev\\hubbi\\hubbi-amayama-scraper\\exports\\hubbi_volkswagen_consolidation_conflicts.json"
+  },
+  "schema": {
+    "columns": [
+      "manufacturer_ref",
+      "search_ref",
+      "name",
+      "brand",
+      "application",
+      "position",
+      "ncm",
+      "barcode",
+      "gross_weight",
+      "net_weight",
+      "width",
+      "depth",
+      "height",
+      "born_at",
+      "deprecated_at",
+      "similarity",
+      "notes",
+      "catalog_id",
+      "file_high",
+      "file_medium",
+      "file_low",
+      "file_water_mark"
+    ],
+    "column_count": 22,
+    "matches_expected": true,
+    "forbidden_present": []
+  },
+  "rows": 41567,
+  "unique_brand_search_ref": 41567,
+  "duplicate_keys": 0,
+  "required_empty": {
+    "manufacturer_ref": 0,
+    "search_ref": 0,
+    "name": 0,
+    "brand": 0
+  },
+  "application": {
+    "empty": 0,
+    "duplicate_cells": 0,
+    "separator_inconsistent": 0,
+    "total_unique_applications": 2357419,
+    "average": 56.7137152067746,
+    "maximum": 882,
+    "multi_application_examples": [
+      {
+        "oem": "100109001B",
+        "applications": 152,
+        "examples": [
+          "VOLKSWAGEN AMAROK - 2HAA23 - 2010/2012 - grade=Amarok single cab",
+          "VOLKSWAGEN AMAROK - 2HAA43 - 2012/2016 - grade=Basis",
+          "VOLKSWAGEN AMAROK - 2HAA44 - 2012/2016 - grade=Basis"
+        ]
+      },
+      {
+        "oem": "101000016AB",
+        "applications": 66,
+        "examples": [
+          "VOLKSWAGEN GOL - 5X10B4 - 2002/2004 - grade=gol",
+          "VOLKSWAGEN GOL - 5X10D4 - 2002 - grade=gol",
+          "VOLKSWAGEN GOL - 5X10E4 - 2002/2004 - grade=gol"
+        ]
+      },
+      {
+        "oem": "101000063AA",
+        "applications": 80,
+        "examples": [
+          "VOLKSWAGEN BORA - 9M2134 - 2007/2014 - grade=Clasico/Jetta",
+          "VOLKSWAGEN BORA - 9M22J4 - 2008/2014 - grade=Clasico/Jetta",
+          "VOLKSWAGEN BORA - 9M23H3 - 2005/2007 - grade=jetta europa"
+        ]
+      },
+      {
+        "oem": "101905601G",
+        "applications": 87,
+        "examples": [
+          "VOLKSWAGEN FOX - 5Z54S2 - 2014/2017 - grade=Crossfox",
+          "VOLKSWAGEN FOX - 5Z54T6 - 2014/2021 - grade=Crossfox",
+          "VOLKSWAGEN FOX - 5Z55E6 - 2014/2021 - grade=fox"
+        ]
+      },
+      {
+        "oem": "101905606A",
+        "applications": 19,
+        "examples": [
+          "VOLKSWAGEN EOS - 1F7362 - 2008/2010 - grade=EOS 2.0",
+          "VOLKSWAGEN EOS - 1F7363 - 2008/2010 - grade=EOS 2.0",
+          "VOLKSWAGEN EOS - 1F73G2 - 2008/2010 - grade=EOS 1.4"
+        ]
+      },
+      {
+        "oem": "101905610C",
+        "applications": 220,
+        "examples": [
+          "VOLKSWAGEN FOX - 5Z11F4 - 2004/2009 - grade=fox",
+          "VOLKSWAGEN FOX - 5Z11R4 - 2008/2009 - grade=Total flex",
+          "VOLKSWAGEN FOX - 5Z12A4 - 2003/2009 - grade=Plus"
+        ]
+      },
+      {
+        "oem": "101905610D",
+        "applications": 21,
+        "examples": [
+          "VOLKSWAGEN FOX - 5Z31E6 - 2009/2014 - grade=fox",
+          "VOLKSWAGEN FOX - 5Z31N4 - 2012/2014 - grade=fox",
+          "VOLKSWAGEN FOX - 5Z32E4 - 2009/2014 - grade=fox"
+        ]
+      },
+      {
+        "oem": "101905622",
+        "applications": 58,
+        "examples": [
+          "VOLKSWAGEN CC - 35842X - 2015/2016 - grade=Passat CC BlueMotion Technology",
+          "VOLKSWAGEN CC - 35842Y - 2015/2016 - grade=Passat CC BlueMotion Technology",
+          "VOLKSWAGEN CC - 35843X - 2011/2016 - grade=Passat CC BlueMotion Technology"
+        ]
+      },
+      {
+        "oem": "101905623",
+        "applications": 86,
+        "examples": [
+          "VOLKSWAGEN FOX - 5Z11F4 - 2004/2009 - grade=fox",
+          "VOLKSWAGEN FOX - 5Z11R4 - 2008/2009 - grade=Total flex",
+          "VOLKSWAGEN FOX - 5Z12A4 - 2003/2009 - grade=Plus"
+        ]
+      },
+      {
+        "oem": "101905625",
+        "applications": 39,
+        "examples": [
+          "VOLKSWAGEN FOX - 5Z11F4 - 2004/2009 - grade=fox",
+          "VOLKSWAGEN FOX - 5Z11R4 - 2008/2009 - grade=Total flex",
+          "VOLKSWAGEN FOX - 5Z12A4 - 2003/2009 - grade=Plus"
+        ]
+      },
+      {
+        "oem": "101905626",
+        "applications": 19,
+        "examples": [
+          "VOLKSWAGEN EOS - 1F7362 - 2008/2010 - grade=EOS 2.0",
+          "VOLKSWAGEN EOS - 1F7363 - 2008/2010 - grade=EOS 2.0",
+          "VOLKSWAGEN EOS - 1F73G2 - 2008/2010 - grade=EOS 1.4"
+        ]
+      },
+      {
+        "oem": "101905626A",
+        "applications": 39,
+        "examples": [
+          "VOLKSWAGEN CC - 35842X - 2015/2016 - grade=Passat CC BlueMotion Technology",
+          "VOLKSWAGEN CC - 35842Y - 2015/2016 - grade=Passat CC BlueMotion Technology",
+          "VOLKSWAGEN CC - 35843X - 2011/2016 - grade=Passat CC BlueMotion Technology"
+        ]
+      },
+      {
+        "oem": "101905632",
+        "applications": 65,
+        "examples": [
+          "VOLKSWAGEN GOL - 5W10D4 - 2005 - grade=gol",
+          "VOLKSWAGEN GOL - 5W10F4 - 2005 - grade=Pointer",
+          "VOLKSWAGEN GOL - 5W10F4 - 2005 - grade=gol"
+        ]
+      },
+      {
+        "oem": "000010227C",
+        "applications": 24,
+        "examples": [
+          "VOLKSWAGEN BORA - 9M23H3 - 2005/2007 - grade=jetta europa",
+          "VOLKSWAGEN BORA - 9M23H4 - 2005/2007 - grade=jetta europa",
+          "VOLKSWAGEN BORA - 9M2434 - 2005/2007 - grade=jetta gl tdi"
+        ]
+      },
+      {
+        "oem": "1026152732",
+        "applications": 230,
+        "examples": [
+          "VOLKSWAGEN GOL - 5U11C4 - 2011 - grade=gol",
+          "VOLKSWAGEN GOL - 5U11E4 - 2011 - grade=gol",
+          "VOLKSWAGEN GOL - 5U11E6 - 2011 - grade=gol"
+        ]
+      },
+      {
+        "oem": "1039719112",
+        "applications": 71,
+        "examples": [
+          "VOLKSWAGEN GOL - 5X10B4 - 2002/2004 - grade=gol",
+          "VOLKSWAGEN GOL - 5X10D4 - 2002 - grade=gol",
+          "VOLKSWAGEN GOL - 5X10E4 - 2002/2004 - grade=gol"
+        ]
+      },
+      {
+        "oem": "010409841A",
+        "applications": 52,
+        "examples": [
+          "VOLKSWAGEN CC - 35842X - 2015/2016 - grade=Passat CC BlueMotion Technology",
+          "VOLKSWAGEN CC - 35842Y - 2015/2016 - grade=Passat CC BlueMotion Technology",
+          "VOLKSWAGEN CC - 35843X - 2011/2016 - grade=Passat CC BlueMotion Technology"
+        ]
+      },
+      {
+        "oem": "010409847",
+        "applications": 24,
+        "examples": [
+          "VOLKSWAGEN BORA - 9M23H3 - 2005/2007 - grade=jetta europa",
+          "VOLKSWAGEN BORA - 9M23H4 - 2005/2007 - grade=jetta europa",
+          "VOLKSWAGEN BORA - 9M2434 - 2005/2007 - grade=jetta gl tdi"
+        ]
+      },
+      {
+        "oem": "1052011932",
+        "applications": 162,
+        "examples": [
+          "VOLKSWAGEN GOL - 5W10D4 - 2005 - grade=gol",
+          "VOLKSWAGEN GOL - 5W10D4 - 2010 - grade=gol",
+          "VOLKSWAGEN GOL - 5W10F4 - 2005 - grade=Pointer"
+        ]
+      },
+      {
+        "oem": "107201551FG",
+        "applications": 81,
+        "examples": [
+          "VOLKSWAGEN AMAROK - 2HAA23 - 2010/2012 - grade=Amarok single cab",
+          "VOLKSWAGEN AMAROK - 2HAA43 - 2012/2016 - grade=Basis",
+          "VOLKSWAGEN AMAROK - 2HAA44 - 2012/2016 - grade=Basis"
+        ]
+      }
+    ]
+  },
+  "position": {
+    "distinct_counts": {
+      "": 32207,
+      "DIANTEIRO": 802,
+      "DIANTEIRO DIREITO": 329,
+      "DIANTEIRO ESQUERDO": 396,
+      "DIREITO": 2408,
+      "ESQUERDO": 3494,
+      "EXTERNO": 54,
+      "INTERNO": 11,
+      "TRASEIRO": 1166,
+      "TRASEIRO DIREITO": 298,
+      "TRASEIRO ESQUERDO": 402
+    },
+    "filled": 9360,
+    "empty": 32207,
+    "invalid": 0,
+    "invalid_examples": []
+  },
+  "periods": {
+    "born_filled": 4060,
+    "born_empty": 37507,
+    "deprecated_filled": 4279,
+    "deprecated_empty": 37288,
+    "out_of_range": [],
+    "born_after_deprecated": []
+  },
+  "similarity": {
+    "invalid_json": 0,
+    "not_array": 0
+  },
+  "images": {
+    "file_high": 41036,
+    "file_medium": 0,
+    "file_low": 0,
+    "file_water_mark": 0,
+    "without_any": 531,
+    "coverage": 0.9872254432602786,
+    "malformed_urls": {},
+    "inconsistent_fields": 0
+  },
+  "conflicts": {
+    "declared": 40921,
+    "names": 3974,
+    "positions": 1235,
+    "periods": 38509,
+    "catalog_ids": 40919,
+    "image_candidates": 11864,
+    "notes": 40844,
+    "policy_mismatches": [],
+    "policy_mismatch_count": 0
+  },
+  "csv": {
+    "pandas_rows": 41567,
+    "malformed_rows": 0,
+    "control_character_rows": 0,
+    "bytes": 136369775
+  },
+  "artifacts": {
+    "conflict_bytes": 272978838,
+    "sample_rows": 200,
+    "sample_bytes": 1842291
+  },
+  "status": "OK"
+}

@@ -112,6 +112,12 @@ def test_limit_specs_and_limit_groups_and_spec_filter_apply_simultaneously(tmp_p
     t1 = FakeBrowserTransport()
     t1.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1.queue_navigate(_capture(TWO_GROUP_MANIFEST_HTML, _SPEC_URL_62184))
+    # Bug fix (manifest truncado): both declared categories (sorted: engine,
+    # front-axle-steering) are each visited on their own URL before the
+    # manifest can become complete — independent of limit_groups, which only
+    # truncates the GROUP_DETAIL pending list afterwards.
+    t1.queue_navigate(_capture(TWO_GROUP_MANIFEST_HTML, "https://x/engine"))
+    t1.queue_navigate(_capture(TWO_GROUP_MANIFEST_HTML, "https://x/front-axle-steering"))
     # only ONE group capture queued — get_pending_groups() sorts (category_slug,
     # group_id): "engine" < "front-axle-steering", so "engine/100" is the one
     # actually attempted under limit_groups=1.
@@ -129,10 +135,16 @@ def test_limit_specs_and_limit_groups_and_spec_filter_apply_simultaneously(tmp_p
         ),
     )
 
-    # exactly 1 spec was processed beyond MARKET_INDEX (SPEC_NAVIGATION + 1 group)
-    group_level_calls = [
-        u for u in t1.navigate_calls if u not in (MARKET_INDEX_URL, _SPEC_URL_62184)
-    ]
+    # exactly 1 spec was processed beyond MARKET_INDEX (SPEC_NAVIGATION +
+    # both category-page visits + 1 group) — category-page visits excluded
+    # here on purpose (a separate, earlier phase from GROUP_DETAIL).
+    non_group_urls = {
+        MARKET_INDEX_URL,
+        _SPEC_URL_62184,
+        "https://x/engine",
+        "https://x/front-axle-steering",
+    }
+    group_level_calls = [u for u in t1.navigate_calls if u not in non_group_urls]
     assert group_level_calls == ["https://x/engine/100"]
     # the second spec (61189) and the second group (front-axle-steering/407)
     # were never touched — the fake transport was never asked for them.

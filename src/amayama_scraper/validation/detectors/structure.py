@@ -38,6 +38,10 @@ SPEC_NAVIGATION_STRUCTURAL_MARKERS = (
 _MARKERS_BY_CAPTURE_KIND: dict[CaptureKind, tuple[str, ...]] = {
     CaptureKind.MARKET_INDEX: MARKET_INDEX_STRUCTURAL_MARKERS,
     CaptureKind.SPEC_NAVIGATION: SPEC_NAVIGATION_STRUCTURAL_MARKERS,
+    # SPEC_CATEGORY_DETAIL is the same page type as SPEC_NAVIGATION (nav +
+    # schemas containers), just navigated to a single category's own URL —
+    # same structural markers apply verbatim.
+    CaptureKind.SPEC_CATEGORY_DETAIL: SPEC_NAVIGATION_STRUCTURAL_MARKERS,
     CaptureKind.GROUP_DETAIL: GROUP_DETAIL_STRUCTURAL_MARKERS,
 }
 

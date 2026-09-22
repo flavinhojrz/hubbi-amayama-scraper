@@ -69,7 +69,19 @@ benchmark-*/
 benchmark*.db
 benchmark*.sqlite*
 amayama-raw/
+amayama_raw/
 artifacts/
+
+# Generated exports: preserve locally or in external backup, never Git normal.
+/exports/*
+!/exports/README.md
+!/exports/hubbi_volkswagen_validation_report.json
+
+# Local test outputs, visual captures, and exploratory run results.
+/test-tmp/
+/spikes/results/
+/image.png
+/image copy.png
 
 # Local browser/runtime
 chrome-profile/

@@ -89,6 +89,9 @@ def test_new_run_leaves_prior_incomplete_run_progress_intact_and_resumable(tmp_p
     t1 = FakeBrowserTransport()
     t1.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    t1.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     t1.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
     run_collection_driver(
         t1,

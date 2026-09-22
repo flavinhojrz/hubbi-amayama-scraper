@@ -100,6 +100,9 @@ def test_spec_navigation_manifest_persisted_and_not_recaptured_on_second_pass(tm
     t1 = FakeBrowserTransport()
     t1.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    t1.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     run_collection_driver(
         t1,
         conn,

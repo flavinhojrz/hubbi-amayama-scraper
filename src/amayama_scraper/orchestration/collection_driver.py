@@ -18,11 +18,12 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 
+from amayama_scraper.checkpoint.checkpoint_entry import CheckpointStatus
 from amayama_scraper.checkpoint.resume import get_pending_groups
 from amayama_scraper.domain.collection_context import CollectionContext, ContextScopeMismatchError
 from amayama_scraper.domain.discovery import build_market_index_url
 from amayama_scraper.domain.identity import ExpectedIdentityContext, SpecIdentity
-from amayama_scraper.domain.manifest import SpecGroupManifest
+from amayama_scraper.domain.manifest import ManifestCategory, ManifestGroupRef, SpecGroupManifest
 from amayama_scraper.ingestion.capture_input import RawCaptureInput
 from amayama_scraper.ingestion.capture_kind import AcquisitionMode, CaptureKind
 from amayama_scraper.ingestion.ports import RawBlobStore, RawCaptureRepository
@@ -35,15 +36,29 @@ from amayama_scraper.orchestration.retry_classification import (
     classify_pending_unit,
     should_attempt_this_pass,
 )
+from amayama_scraper.persistence.repositories.category_visit_repo import (
+    get_category_visit,
+)
 from amayama_scraper.persistence.repositories.checkpoint_repo import (
     get_checkpoint_entry,
     get_collection_run,
     save_collection_run,
 )
 from amayama_scraper.persistence.repositories.current_state_repo import get_current_state
-from amayama_scraper.persistence.repositories.manifest_repo import get_authoritative
+from amayama_scraper.persistence.repositories.manifest_repo import (
+    get_authoritative,
+    get_latest,
+    save_manifest,
+)
 from amayama_scraper.persistence.repositories.spec_registry_repo import list_by_scope
-from amayama_scraper.transport.port import BrowserCapture, BrowserTransport
+from amayama_scraper.transport.errors import TransportError
+from amayama_scraper.transport.port import (
+    DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+    BrowserCapture,
+    BrowserTransport,
+)
 from amayama_scraper.validation.types import ValidationOutcome
 
 _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS = 5.0
@@ -187,6 +202,14 @@ class OperationalFilters:
     limit_groups: int | None = None
     force: list[str] = field(default_factory=list)
     retry_rejected: bool = False
+    #: Repair/backfill (bug de manifest truncado): quando True, todo spec
+    #: processado nesta passada tem seu manifesto redescoberto categoria-a-
+    #: categoria mesmo que já exista um manifesto autoritativo salvo — a
+    #: menos que esse manifesto já tenha sido produzido pela própria
+    #: MANIFEST_DISCOVERY_STRATEGY nova (idempotente: um spec já reparado e
+    #: completo nunca é renavegado de novo). Nunca True em coleta normal
+    #: (`run`, default `False` — comportamento idêntico a antes).
+    force_manifest_rediscovery: bool = False
 
 
 class UnknownSpecFilterError(ValueError):
@@ -238,6 +261,361 @@ def _expected_context(identity: SpecIdentity) -> ExpectedIdentityContext:
         market=identity.market,
         model_code=identity.model_code,
         amayama_catalog_id=identity.amayama_catalog_id,
+    )
+
+
+# --- Descoberta autoritativa de manifest (bug fix — manifest truncado) ------
+#
+# Causa raiz (auditoria real, 1.368 specs Volkswagen BR, 57,46% truncadas):
+# a página BASE de uma spec pode mostrar cards de apenas um subconjunto das
+# categorias declaradas em `.epcVariation__schemaGroups` — o parser antigo
+# marcava `manifest_complete=True` sempre que encontrava >=1 grupo, mesmo
+# com categorias inteiras ausentes. `parse_spec_group_manifest()` agora
+# NUNCA marca completude sozinho (sempre `manifest_complete=False` — ver seu
+# docstring); só `discover_spec_manifest()` pode, e só depois de visitar e
+# parsear com sucesso TODAS as categorias declaradas, cada uma na sua
+# própria URL (SPEC_CATEGORY_DETAIL, `orchestration/pipeline.py::
+# _route_spec_category_detail()`).
+
+#: Assinatura gravada em `SpecGroupManifest.validation_evidence["discovery_strategy"]`
+#: por todo manifesto produzido por `discover_spec_manifest()` — permite a um
+#: repair/backfill (`OperationalFilters.force_manifest_rediscovery`) saber,
+#: sem renavegar nada, se um manifesto `manifest_complete=True` já é
+#: resultado desta estratégia (idempotência: nunca renavega um spec já
+#: reparado e completo).
+MANIFEST_DISCOVERY_STRATEGY = "category-by-category-v1"
+
+
+def _spec_needs_manifest_discovery(
+    conn: sqlite3.Connection, key: str, run_id: str, filters: OperationalFilters
+) -> bool:
+    """Normalmente só redescobre quando não há manifesto autoritativo nenhum
+    ainda. Repair/backfill (`--repair-manifest`,
+    `filters.force_manifest_rediscovery=True`) força a redescoberta mesmo
+    com um manifesto autoritativo já salvo — a menos que ele já seja produto
+    da própria `MANIFEST_DISCOVERY_STRATEGY` nova (idempotência: um spec já
+    reparado e completo nunca é renavegado de novo numa segunda passada de
+    repair). Compartilhada por `process_one_spec()` e
+    `run_spec_navigation_batch_phase()` — nunca duas cópias do mesmo
+    predicado podendo divergir."""
+    manifest = get_authoritative(conn, key, run_id)
+    return manifest is None or (
+        filters.force_manifest_rediscovery
+        and manifest.validation_evidence.get("discovery_strategy") != MANIFEST_DISCOVERY_STRATEGY
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ManifestDiscoveryOutcome:
+    manifest: SpecGroupManifest | None
+    manual_retry_required: bool = False
+
+
+def _merge_category_groups(
+    evidence_groups: object,
+) -> dict[str, ManifestGroupRef]:
+    if not isinstance(evidence_groups, list):
+        return {}
+    merged: dict[str, ManifestGroupRef] = {}
+    for item in evidence_groups:
+        if not isinstance(item, dict):
+            continue
+        group_id = item.get("group_id")
+        source_url = item.get("source_url")
+        if not group_id or not source_url:
+            continue
+        # dict keyed by group_id — a category repeating a group it already
+        # visited (e.g. re-run across passes) is deduplicated, never an error.
+        merged[str(group_id)] = ManifestGroupRef(group_id=str(group_id), source_url=str(source_url))
+    return merged
+
+
+def discover_spec_manifest(
+    transport: BrowserTransport,
+    conn: sqlite3.Connection,
+    blob_store: RawBlobStore,
+    capture_repo: RawCaptureRepository,
+    *,
+    run_id: str,
+    context: CollectionContext,
+    spec: SpecIdentity,
+    filters: OperationalFilters,
+    throttled_navigate: Callable[[str], BrowserCapture],
+    throttled_navigate_many: Callable[[list[str]], dict[str, BrowserCapture]] | None = None,
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    poll_interval: float = _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS,
+    challenge_timeout: float | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
+    on_event: Callable[..., None] = lambda event, **kwargs: None,
+    process_capture_fn: Callable[..., ProcessCaptureResult] = process_capture,
+) -> ManifestDiscoveryOutcome:
+    """Autoritativo, multi-página: base -> TODAS as categorias declaradas,
+    cada uma navegada individualmente -> união deduplicada -> só então
+    `manifest_complete=True` (nunca por ter encontrado >=1 grupo — FR do bug
+    fix). Reusa o loop de challenge já existente (`await_challenge_
+    resolution()`, genérico em `capture_kind`) e a classificação de retry já
+    existente (`classify_pending_unit()`/`should_attempt_this_pass()`) —
+    nenhuma máquina de estados nova.
+
+    Uma categoria já `ACCEPTED` (de uma passada anterior deste MESMO
+    `run_id` — nunca renavegada; seus grupos são lidos de volta de
+    `evidence["groups"]`, gravados por `_route_spec_category_detail()`) —
+    é isto que torna repair/backfill idempotente e nunca-re-baixa (grupos já
+    ACCEPTED em `checkpoint_entry`/categorias já ACCEPTED em
+    `spec_category_visit`, ambos scoped ao mesmo `run_id`, permanecem
+    intocados).
+
+    `throttled_navigate_many` (mesma técnica/motivo do GROUP_DETAIL em
+    `process_one_spec()` — spikes/batched_fetch_spike.py: ~5.900 requisições
+    reais contra o Amayama, 0 challenges em modo lote vs. ~90-100% em modo
+    `navigate()` único): visitar cada categoria declarada uma por uma via
+    `navigate()` sequencial (o único caminho antes desta correção) reintroduz
+    exatamente a taxa de CAPTCHA/challenge que o fetch em lote existia para
+    evitar — cada spec com N categorias declaradas virava N navegações
+    sequenciais extras. `None` (default) preserva `throttled_navigate()`
+    único por categoria; quando fornecido, as categorias ATTEMPTABLE desta
+    passada são buscadas em lotes de `detail_fetch_batch_size` — qualquer URL
+    ausente do lote OU classificada como CHALLENGE cai automaticamente para o
+    navigate() único + `await_challenge_resolution()`, exatamente como
+    GROUP_DETAIL já faz (nunca resolve um CHALLENGE vindo de um lote
+    diretamente — a aba nunca foi navegada até essa URL)."""
+    key = spec.stable_key()
+
+    # Bug fix (CAPTCHA excessivo): se já existe um fragmento de base page
+    # PARA ESTE MESMO run_id — produzido agora mesmo pela pré-passagem em
+    # lote (`run_spec_navigation_batch_phase()`) ou por uma tentativa
+    # anterior desta mesma execução — nunca navega de novo. `"declared_
+    # category_urls" in evidence` é a guarda: só reusa um fragmento
+    # produzido por ESTA versão do parser (um fragmento salvo antes da
+    # correção de manifest truncado não tem essa chave — nunca reusado,
+    # cai no navigate() normal abaixo, que o substitui por um novo,
+    # correto)."""
+    base_fragment = get_latest(conn, key, run_id)
+    if base_fragment is None or "declared_category_urls" not in base_fragment.validation_evidence:
+        nav_capture = throttled_navigate(spec.source_url)
+        nav_input = to_raw_capture_input(
+            nav_capture,
+            capture_kind=CaptureKind.SPEC_NAVIGATION,
+            run_id=run_id,
+            expected_identity_context=_expected_context(spec),
+        )
+        nav_result = process_capture_fn(
+            conn, blob_store, capture_repo, run_id, nav_input, context=context, spec_key=key
+        )
+        if nav_result.validation_outcome is ValidationOutcome.CHALLENGE:
+            nav_outcome = await_challenge_resolution(
+                transport,
+                conn,
+                blob_store,
+                capture_repo,
+                run_id=run_id,
+                capture_kind=CaptureKind.SPEC_NAVIGATION,
+                source_url_hint=spec.source_url,
+                context=context,
+                expected_identity_context=_expected_context(spec),
+                spec_key=key,
+                poll_interval=poll_interval,
+                timeout=challenge_timeout,
+                sleep=sleep,
+                now=now,
+                on_event=on_event,
+                process_capture_fn=process_capture_fn,
+            )
+            if nav_outcome.result is None:
+                on_event("SPEC_NAVIGATION_CHALLENGE_TIMEOUT", spec_key=key)
+                return ManifestDiscoveryOutcome(manifest=None)
+            nav_result = nav_outcome.result
+
+        if nav_result.critical_error or not nav_result.routed_to_parser:
+            on_event("SPEC_NAVIGATION_REJECTED", spec_key=key)
+            return ManifestDiscoveryOutcome(manifest=None)
+
+        base_fragment = get_latest(conn, key, run_id)
+        if base_fragment is None:
+            on_event("SPEC_NAVIGATION_REJECTED", spec_key=key)
+            return ManifestDiscoveryOutcome(manifest=None)
+
+    declared_category_urls_raw = base_fragment.validation_evidence.get("declared_category_urls", {})
+    declared_category_urls: dict[str, str] = (
+        declared_category_urls_raw if isinstance(declared_category_urls_raw, dict) else {}
+    )
+    declared_slugs = sorted(declared_category_urls)
+
+    merged_categories: dict[str, dict[str, ManifestGroupRef]] = {}
+    visited_ok: list[str] = []
+    failed_categories: dict[str, str] = {}
+    saw_manual_retry_required = False
+
+    def _finish_category_result(slug: str, cat_result: ProcessCaptureResult) -> None:
+        if not cat_result.routed_to_parser or cat_result.critical_error:
+            failed_categories[slug] = "REJECTED"
+            on_event("SPEC_MANIFEST_CATEGORY_REJECTED", spec_key=key, category_slug=slug)
+            return
+        visited_entry = get_category_visit(conn, run_id, key, slug)
+        assert visited_entry is not None and visited_entry.status is CheckpointStatus.ACCEPTED
+        merged_categories[slug] = _merge_category_groups(visited_entry.evidence.get("groups"))
+        visited_ok.append(slug)
+        on_event(
+            "SPEC_MANIFEST_CATEGORY_VISITED",
+            spec_key=key,
+            category_slug=slug,
+            group_count=len(merged_categories[slug]),
+        )
+
+    def _process_category_via_single_navigate(slug: str, url: str) -> None:
+        cat_capture = throttled_navigate(url)
+        cat_input = to_raw_capture_input(
+            cat_capture,
+            capture_kind=CaptureKind.SPEC_CATEGORY_DETAIL,
+            run_id=run_id,
+            expected_identity_context=_expected_context(spec),
+        )
+        cat_result = process_capture_fn(
+            conn,
+            blob_store,
+            capture_repo,
+            run_id,
+            cat_input,
+            context=context,
+            category_slug=slug,
+            spec_key=key,
+        )
+        if cat_result.validation_outcome is ValidationOutcome.CHALLENGE:
+            cat_outcome = await_challenge_resolution(
+                transport,
+                conn,
+                blob_store,
+                capture_repo,
+                run_id=run_id,
+                capture_kind=CaptureKind.SPEC_CATEGORY_DETAIL,
+                source_url_hint=url,
+                context=context,
+                expected_identity_context=_expected_context(spec),
+                category_slug=slug,
+                spec_key=key,
+                poll_interval=poll_interval,
+                timeout=challenge_timeout,
+                sleep=sleep,
+                now=now,
+                on_event=on_event,
+                process_capture_fn=process_capture_fn,
+            )
+            if cat_outcome.result is None:
+                failed_categories[slug] = "CHALLENGE_TIMEOUT"
+                on_event(
+                    "SPEC_MANIFEST_CATEGORY_CHALLENGE_TIMEOUT", spec_key=key, category_slug=slug
+                )
+                return
+            cat_result = cat_outcome.result
+        _finish_category_result(slug, cat_result)
+
+    attemptable: list[tuple[str, str]] = []
+    for slug in declared_slugs:
+        url = declared_category_urls[slug]
+        existing_visit = get_category_visit(conn, run_id, key, slug)
+
+        if existing_visit is not None and existing_visit.status is CheckpointStatus.ACCEPTED:
+            merged_categories[slug] = _merge_category_groups(existing_visit.evidence.get("groups"))
+            visited_ok.append(slug)
+            continue
+
+        classification = classify_pending_unit(existing_visit)
+        if not should_attempt_this_pass(classification, retry_rejected=filters.retry_rejected):
+            failed_categories[slug] = classification.value
+            saw_manual_retry_required = True
+            on_event(
+                "SPEC_MANIFEST_CATEGORY_AWAITING_MANUAL_RETRY", spec_key=key, category_slug=slug
+            )
+            continue
+
+        attemptable.append((slug, url))
+
+    if throttled_navigate_many is None:
+        # Caminho de hoje, inalterado: um throttled_navigate() por categoria.
+        for slug, url in attemptable:
+            _process_category_via_single_navigate(slug, url)
+    else:
+        # Fetch em lote (mesma técnica/motivo do GROUP_DETAIL — ver docstring
+        # acima): qualquer URL ausente do lote OU CHALLENGE cai para
+        # _process_category_via_single_navigate, byte a byte.
+        for chunk_start in range(0, len(attemptable), detail_fetch_batch_size):
+            chunk = attemptable[chunk_start : chunk_start + detail_fetch_batch_size]
+            urls = [url for _, url in chunk]
+            try:
+                batch_map = throttled_navigate_many(urls)
+            except TransportError:
+                # Falha de transporte do lote inteiro (ex.: Chrome caiu no
+                # meio) — todo o chunk cai pro fallback per-URL abaixo.
+                batch_map = {}
+            for slug, url in chunk:
+                capture = batch_map.get(url)
+                if capture is None:
+                    _process_category_via_single_navigate(slug, url)
+                    continue
+                cat_input = to_raw_capture_input(
+                    capture,
+                    capture_kind=CaptureKind.SPEC_CATEGORY_DETAIL,
+                    run_id=run_id,
+                    expected_identity_context=_expected_context(spec),
+                )
+                cat_result = process_capture_fn(
+                    conn,
+                    blob_store,
+                    capture_repo,
+                    run_id,
+                    cat_input,
+                    context=context,
+                    category_slug=slug,
+                    spec_key=key,
+                )
+                if cat_result.validation_outcome is ValidationOutcome.CHALLENGE:
+                    _process_category_via_single_navigate(slug, url)
+                    continue
+                _finish_category_result(slug, cat_result)
+
+    all_declared_visited = set(visited_ok) == set(declared_slugs)
+    categories = tuple(
+        ManifestCategory(category_slug=slug, groups=tuple(merged_categories[slug].values()))
+        for slug in sorted(merged_categories)
+    )
+    group_count = sum(len(category.groups) for category in categories)
+
+    assembled = SpecGroupManifest(
+        spec_key=key,
+        source_capture_id=base_fragment.source_capture_id,
+        discovered_at=now(),
+        categories=categories,
+        manifest_complete=all_declared_visited,
+        validation_evidence={
+            "discovery_strategy": MANIFEST_DISCOVERY_STRATEGY,
+            "declared_category_count": len(declared_slugs),
+            "declared_categories": declared_slugs,
+            "visited_category_count": len(visited_ok),
+            "visited_categories": sorted(visited_ok),
+            "failed_categories": failed_categories,
+            "group_count": group_count,
+        },
+    )
+    save_manifest(conn, assembled, run_id=run_id)
+
+    if all_declared_visited:
+        on_event(
+            "SPEC_MANIFEST_COMPLETE",
+            spec_key=key,
+            category_count=len(declared_slugs),
+            group_count=group_count,
+        )
+        return ManifestDiscoveryOutcome(manifest=assembled)
+
+    on_event(
+        "SPEC_MANIFEST_INCOMPLETE",
+        spec_key=key,
+        declared=len(declared_slugs),
+        visited=len(visited_ok),
+    )
+    return ManifestDiscoveryOutcome(
+        manifest=assembled, manual_retry_required=saw_manual_retry_required
     )
 
 
@@ -330,6 +708,8 @@ def process_one_spec(
     spec: SpecIdentity,
     filters: OperationalFilters,
     throttled_navigate: Callable[[str], BrowserCapture],
+    throttled_navigate_many: Callable[[list[str]], dict[str, BrowserCapture]] | None = None,
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE,
     poll_interval: float = _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS,
     challenge_timeout: float | None = None,
     sleep: Callable[[float], None] = time.sleep,
@@ -360,67 +740,81 @@ def process_one_spec(
     (comportamento idêntico a antes). `orchestration/worker_pool.py` injeta
     versões com fencing atômico (checagem de lease/token na mesma transação
     da escrita) — um worker que perdeu o lease nunca persiste depois de um
-    takeover."""
+    takeover.
+
+    `throttled_navigate_many` (fetch em lote via `BrowserTransport.
+    navigate_many()` — validado em spikes/batched_fetch_spike.py: ~5.900
+    requisições reais contra o Amayama, 0 challenges em modo lote vs.
+    ~90-100% em modo navigate único): `None` (default) preserva o
+    comportamento de hoje byte-a-byte — GROUP_DETAIL sempre via
+    `throttled_navigate()` único, um por um. Quando fornecido, os grupos
+    pendentes ATTEMPTABLE desta passada são buscados em lotes de
+    `detail_fetch_batch_size`; qualquer URL ausente do lote (falha de
+    rede/timeout) OU classificada como CHALLENGE cai automaticamente para o
+    caminho de hoje (`throttled_navigate()` único + `await_challenge_
+    resolution()`) — nunca resolve um CHALLENGE vindo de um lote via
+    `await_challenge_resolution()` diretamente, porque essa captura veio de
+    um `fetch()` que nunca navegou a aba: `transport.current_capture()`
+    estaria lendo a página ATUAL da aba, que não tem relação nenhuma com a
+    URL buscada em lote."""
     key = spec.stable_key()
 
     manifest = get_authoritative(conn, key, run_id)
-    if manifest is None:
-        nav_capture = throttled_navigate(spec.source_url)
-        nav_input = to_raw_capture_input(
-            nav_capture,
-            capture_kind=CaptureKind.SPEC_NAVIGATION,
+    if _spec_needs_manifest_discovery(conn, key, run_id, filters):
+        discovery = discover_spec_manifest(
+            transport,
+            conn,
+            blob_store,
+            capture_repo,
             run_id=run_id,
-            expected_identity_context=_expected_context(spec),
+            context=context,
+            spec=spec,
+            filters=filters,
+            throttled_navigate=throttled_navigate,
+            throttled_navigate_many=throttled_navigate_many,
+            detail_fetch_batch_size=detail_fetch_batch_size,
+            poll_interval=poll_interval,
+            challenge_timeout=challenge_timeout,
+            sleep=sleep,
+            now=now,
+            on_event=on_event,
+            process_capture_fn=process_capture_fn,
         )
-        nav_result = process_capture_fn(
-            conn, blob_store, capture_repo, run_id, nav_input, context=context, spec_key=key
-        )
-        if nav_result.validation_outcome is ValidationOutcome.CHALLENGE:
-            nav_outcome = await_challenge_resolution(
-                transport,
-                conn,
-                blob_store,
-                capture_repo,
-                run_id=run_id,
-                capture_kind=CaptureKind.SPEC_NAVIGATION,
-                source_url_hint=spec.source_url,
-                context=context,
-                expected_identity_context=_expected_context(spec),
-                spec_key=key,
-                poll_interval=poll_interval,
-                timeout=challenge_timeout,
-                sleep=sleep,
-                now=now,
-                on_event=on_event,
-                process_capture_fn=process_capture_fn,
-            )
-            if nav_outcome.result is None:
-                on_event("SPEC_NAVIGATION_CHALLENGE_TIMEOUT", spec_key=key)
-                return SpecPassOutcome(disposition=SpecPassDisposition.DEFERRED_THIS_SESSION)
-        manifest = get_authoritative(conn, key, run_id)
-        if manifest is None:
-            on_event("SPEC_NAVIGATION_REJECTED", spec_key=key)
+        if discovery.manifest is None or not discovery.manifest.manifest_complete:
+            if discovery.manual_retry_required:
+                on_event("SPEC_MANIFEST_DISCOVERY_MANUAL_RETRY_REQUIRED", spec_key=key)
+                return SpecPassOutcome(disposition=SpecPassDisposition.MANUAL_RETRY_REQUIRED)
+            on_event("SPEC_MANIFEST_DISCOVERY_DEFERRED", spec_key=key)
             return SpecPassOutcome(disposition=SpecPassDisposition.DEFERRED_THIS_SESSION)
+        manifest = discovery.manifest
+    assert manifest is not None  # either already authoritative, or just discovered above
 
     pending = get_pending_groups(conn, run_id, key)
     pending = apply_group_limit(pending, filters.limit_groups)
 
     made_progress = False
     saw_manual_retry_required = False
-    for category_slug, group_id in pending:
-        entry = get_checkpoint_entry(conn, run_id, key, category_slug, group_id)
-        classification = classify_pending_unit(entry)
-        if not should_attempt_this_pass(classification, retry_rejected=filters.retry_rejected):
-            saw_manual_retry_required = True
+
+    def _finish_group_result(
+        category_slug: str, group_id: str, group_result: ProcessCaptureResult
+    ) -> None:
+        nonlocal made_progress
+        if group_result.routed_to_parser and not group_result.critical_error:
+            finalize_fn(conn, blob_store, capture_repo, run_id, key, context=context)
+            made_progress = True
+            on_event("GROUP_ACCEPTED", spec_key=key, category_slug=category_slug, group_id=group_id)
+        else:
             on_event(
-                "GROUP_REJECTED_AWAITING_MANUAL_RETRY",
+                "GROUP_REJECTED",
                 spec_key=key,
                 category_slug=category_slug,
                 group_id=group_id,
+                outcome=group_result.validation_outcome,
             )
-            continue
 
-        group_url = _source_url_for_group(manifest, category_slug, group_id)
+    def _process_group_via_single_navigate(
+        category_slug: str, group_id: str, group_url: str
+    ) -> None:
         group_capture = throttled_navigate(group_url)
         group_input = to_raw_capture_input(
             group_capture,
@@ -467,21 +861,83 @@ def process_one_spec(
                     category_slug=category_slug,
                     group_id=group_id,
                 )
-                continue
+                return
             group_result = group_outcome.result
+        _finish_group_result(category_slug, group_id, group_result)
 
-        if group_result.routed_to_parser and not group_result.critical_error:
-            finalize_fn(conn, blob_store, capture_repo, run_id, key, context=context)
-            made_progress = True
-            on_event("GROUP_ACCEPTED", spec_key=key, category_slug=category_slug, group_id=group_id)
-        else:
-            on_event(
-                "GROUP_REJECTED",
-                spec_key=key,
-                category_slug=category_slug,
-                group_id=group_id,
-                outcome=group_result.validation_outcome,
-            )
+    if throttled_navigate_many is None:
+        # Caminho de hoje, inalterado: um throttled_navigate() por grupo.
+        for category_slug, group_id in pending:
+            entry = get_checkpoint_entry(conn, run_id, key, category_slug, group_id)
+            classification = classify_pending_unit(entry)
+            if not should_attempt_this_pass(classification, retry_rejected=filters.retry_rejected):
+                saw_manual_retry_required = True
+                on_event(
+                    "GROUP_REJECTED_AWAITING_MANUAL_RETRY",
+                    spec_key=key,
+                    category_slug=category_slug,
+                    group_id=group_id,
+                )
+                continue
+            group_url = _source_url_for_group(manifest, category_slug, group_id)
+            _process_group_via_single_navigate(category_slug, group_id, group_url)
+    else:
+        # Caminho novo: busca os grupos ATTEMPTABLE em lote via fetch()
+        # dentro do navegador (validado empiricamente contra o Amayama —
+        # ver docstring acima). Qualquer URL ausente do lote OU CHALLENGE
+        # cai para _process_group_via_single_navigate — o mesmíssimo
+        # caminho de hoje, byte a byte, para essa URL específica.
+        attemptable: list[tuple[str, str, str]] = []
+        for category_slug, group_id in pending:
+            entry = get_checkpoint_entry(conn, run_id, key, category_slug, group_id)
+            classification = classify_pending_unit(entry)
+            if not should_attempt_this_pass(classification, retry_rejected=filters.retry_rejected):
+                saw_manual_retry_required = True
+                on_event(
+                    "GROUP_REJECTED_AWAITING_MANUAL_RETRY",
+                    spec_key=key,
+                    category_slug=category_slug,
+                    group_id=group_id,
+                )
+                continue
+            group_url = _source_url_for_group(manifest, category_slug, group_id)
+            attemptable.append((category_slug, group_id, group_url))
+
+        for chunk_start in range(0, len(attemptable), detail_fetch_batch_size):
+            chunk = attemptable[chunk_start : chunk_start + detail_fetch_batch_size]
+            urls = [group_url for _, _, group_url in chunk]
+            try:
+                batch_map = throttled_navigate_many(urls)
+            except TransportError:
+                # Falha de transporte do lote inteiro (ex.: Chrome caiu no
+                # meio) — todo o chunk cai pro fallback per-URL abaixo.
+                batch_map = {}
+            for category_slug, group_id, group_url in chunk:
+                capture = batch_map.get(group_url)
+                if capture is None:
+                    _process_group_via_single_navigate(category_slug, group_id, group_url)
+                    continue
+                group_input = to_raw_capture_input(
+                    capture,
+                    capture_kind=CaptureKind.GROUP_DETAIL,
+                    run_id=run_id,
+                    expected_identity_context=_expected_context(spec),
+                )
+                group_result = process_capture_fn(
+                    conn,
+                    blob_store,
+                    capture_repo,
+                    run_id,
+                    group_input,
+                    context=context,
+                    category_slug=category_slug,
+                    group_id=group_id,
+                    spec_key=key,
+                )
+                if group_result.validation_outcome is ValidationOutcome.CHALLENGE:
+                    _process_group_via_single_navigate(category_slug, group_id, group_url)
+                    continue
+                _finish_group_result(category_slug, group_id, group_result)
 
     on_event("SPEC_PASS_COMPLETE", spec_key=key)
     if made_progress:
@@ -568,6 +1024,99 @@ def run_market_index_phase(
     return True
 
 
+# --- Nível B, fase em lote: SPEC_NAVIGATION de várias specs de uma vez -----
+#
+# Bug fix (CAPTCHA excessivo, achado real: repair sobre 242 specs da Amarok
+# gerando dezenas de challenges consecutivos): a página-base de CADA spec
+# (SPEC_NAVIGATION) nunca passava pelo fetch em lote — só categorias/grupos
+# (correção anterior desta mesma sessão). Com N specs precisando de
+# descoberta, isso virava N navigate() sequenciais, cada um com a MESMA taxa
+# de challenge de ~90-100% já medida (spikes/batched_fetch_spike.py) — a
+# fonte dominante de CAPTCHA numa passada grande. Esta fase busca, em lote,
+# a base page de toda spec elegível ANTES do laço principal — sempre
+# sequencial, sempre no processo orquestrador (mesmo espírito de
+# run_market_index_phase(), nunca paralelizada entre workers).
+#
+# Puramente uma otimização de custo de rede: se nunca chamada, ou se
+# `throttled_navigate_many` for `None`, `discover_spec_manifest()` continua
+# funcionando idêntico — navega a base page individualmente, como sempre
+# fez. Quando chamada, ela simplesmente PREENCHE `spec_group_manifest` com o
+# fragmento de cada spec de antemão; `discover_spec_manifest()` reconhece o
+# fragmento já existente (guarda: `"declared_category_urls" in evidence`,
+# nunca reusa um fragmento de antes da correção de manifest truncado) e
+# pula a navegação individual para essa spec.
+
+
+def run_spec_navigation_batch_phase(
+    transport: BrowserTransport,
+    conn: sqlite3.Connection,
+    blob_store: RawBlobStore,
+    capture_repo: RawCaptureRepository,
+    *,
+    run_id: str,
+    context: CollectionContext,
+    specs: list[SpecIdentity],
+    filters: OperationalFilters,
+    throttled_navigate_many: Callable[[list[str]], dict[str, BrowserCapture]],
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    on_event: Callable[..., None] = lambda event, **kwargs: None,
+    process_capture_fn: Callable[..., ProcessCaptureResult] = process_capture,
+) -> None:
+    """`specs` já deve vir filtrada (specs_to_process/selected — pós
+    `apply_operational_filters()`); esta fase filtra internamente só as que
+    ainda precisam de descoberta (`_spec_needs_manifest_discovery()`, o
+    MESMO predicado que `process_one_spec()` usa — nunca duas cópias
+    podendo divergir), incluindo specs já VALID que `filters.force` reabre.
+
+    Qualquer URL ausente do lote OU classificada como CHALLENGE é
+    simplesmente ignorada aqui — nunca resolvida via `await_challenge_
+    resolution()` (essa captura veio de um `fetch()`, nunca navegou a aba de
+    verdade). `discover_spec_manifest()` cuida dela normalmente, via
+    `navigate()` único + poll, exatamente como se esta fase nunca tivesse
+    rodado para essa spec específica."""
+    candidates = [
+        spec
+        for spec in specs
+        if _spec_needs_manifest_discovery(conn, spec.stable_key(), run_id, filters)
+    ]
+    if not candidates:
+        return
+
+    on_event("SPEC_NAVIGATION_BATCH_STARTED", spec_count=len(candidates))
+    for chunk_start in range(0, len(candidates), detail_fetch_batch_size):
+        chunk = candidates[chunk_start : chunk_start + detail_fetch_batch_size]
+        urls = [spec.source_url for spec in chunk]
+        try:
+            batch_map = throttled_navigate_many(urls)
+        except TransportError:
+            # Falha de transporte do lote inteiro — cada spec cai pro
+            # navigate() individual dentro de discover_spec_manifest(),
+            # exatamente como se nunca tivesse sido tentada aqui.
+            continue
+        for spec in chunk:
+            capture = batch_map.get(spec.source_url)
+            if capture is None:
+                continue
+            key = spec.stable_key()
+            nav_input = to_raw_capture_input(
+                capture,
+                capture_kind=CaptureKind.SPEC_NAVIGATION,
+                run_id=run_id,
+                expected_identity_context=_expected_context(spec),
+            )
+            result = process_capture_fn(
+                conn, blob_store, capture_repo, run_id, nav_input, context=context, spec_key=key
+            )
+            if result.validation_outcome is ValidationOutcome.CHALLENGE:
+                continue  # nunca resolvido aqui — ver docstring
+            on_event(
+                "SPEC_NAVIGATION_BATCH_ITEM",
+                spec_key=key,
+                accepted=result.routed_to_parser and not result.critical_error,
+            )
+    on_event("SPEC_NAVIGATION_BATCH_COMPLETE")
+
+
 # --- Laço de descoberta-e-ação (contracts/browser-transport-contract.md §3) -
 
 
@@ -583,6 +1132,10 @@ def run_collection_driver(
     poll_interval: float = _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS,
     challenge_timeout: float | None = None,
     min_interval: float = _DEFAULT_MIN_INTERVAL_SECONDS,
+    enable_detail_batch_fetch: bool = False,
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    detail_fetch_chunk_size: int = DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    detail_fetch_timeout_ms: int = DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     on_event: Callable[..., None] = lambda event, **kwargs: None,
@@ -619,6 +1172,12 @@ def run_collection_driver(
     de falha de transporte (que vive inteiramente dentro do adapter
     concreto, invisível aqui). `min_interval=0` (default) nunca introduz
     espera.
+
+    `enable_detail_batch_fetch` (default `False` — preserva o comportamento
+    de hoje byte-a-byte): quando `True`, GROUP_DETAIL passa a ser buscado em
+    lote via `transport.navigate_many()` (`process_one_spec()`), com
+    fallback automático por-URL para o caminho de navegação única sempre que
+    necessário — ver docstring de `process_one_spec()`.
     """
     run = get_collection_run(conn, run_id)
     if run is None or run.scope != context.scope():
@@ -641,6 +1200,19 @@ def run_collection_driver(
         capture = transport.navigate(url)
         last_navigate_at = now()
         return capture
+
+    def throttled_navigate_many(urls: list[str]) -> dict[str, BrowserCapture]:
+        nonlocal last_navigate_at
+        if min_interval > 0 and last_navigate_at is not None:
+            elapsed = (now() - last_navigate_at).total_seconds()
+            remaining = min_interval - elapsed
+            if remaining > 0:
+                sleep(remaining)
+        captures = transport.navigate_many(
+            urls, chunk_size=detail_fetch_chunk_size, timeout_ms=detail_fetch_timeout_ms
+        )
+        last_navigate_at = now()
+        return captures
 
     # Nível A — MARKET_INDEX (005 T509/T511: extraído para run_market_index_phase())
     proceeded = run_market_index_phase(
@@ -669,6 +1241,31 @@ def run_collection_driver(
     specs_to_process = apply_operational_filters(all_specs, filters)
     on_event("RUN_STARTED", discovered=len(all_specs), selected=len(specs_to_process))
 
+    if enable_detail_batch_fetch:
+        # Bug fix (CAPTCHA excessivo): busca em lote a base page de toda
+        # spec elegível ANTES do laço — nunca das que serão puladas por já
+        # VALID (mesmo filtro do laço abaixo), para não gastar rede com
+        # specs que não vão ser tocadas nesta passada.
+        eligible_for_batch = [
+            spec
+            for spec in specs_to_process
+            if get_current_state(conn, spec.stable_key()) is None
+            or spec.stable_key() in filters.force
+        ]
+        run_spec_navigation_batch_phase(
+            transport,
+            conn,
+            blob_store,
+            capture_repo,
+            run_id=run_id,
+            context=context,
+            specs=eligible_for_batch,
+            filters=filters,
+            throttled_navigate_many=throttled_navigate_many,
+            detail_fetch_batch_size=detail_fetch_batch_size,
+            on_event=on_event,
+        )
+
     for index, spec in enumerate(specs_to_process, start=1):
         key = spec.stable_key()
         current_state = get_current_state(conn, key)
@@ -689,6 +1286,8 @@ def run_collection_driver(
             spec=spec,
             filters=filters,
             throttled_navigate=throttled_navigate,
+            throttled_navigate_many=throttled_navigate_many if enable_detail_batch_fetch else None,
+            detail_fetch_batch_size=detail_fetch_batch_size,
             poll_interval=poll_interval,
             challenge_timeout=challenge_timeout,
             sleep=sleep,

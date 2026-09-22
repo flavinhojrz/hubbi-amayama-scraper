@@ -9,12 +9,24 @@ uma substituição futura, sem nenhum código de PostgreSQL aqui (DEC-002).
 from __future__ import annotations
 
 import sqlite3
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TypeVar
 
 _T = TypeVar("_T")
+
+#: Retries só para a aquisição do `BEGIN IMMEDIATE` em si (nunca para o corpo
+#: da transação, que já reservou o lock de escrita com sucesso nesse ponto) —
+#: sob `--workers 4` em escopos grandes (ex. GOL, 290 specs), até 4 processos
+#: podem tentar abrir uma transação de escrita ao mesmo tempo; o `busy_timeout`
+#: da conexão (`connect()`) já espera, mas sob contenção suficiente mesmo isso
+#: pode não bastar. Antes disto, um `BEGIN IMMEDIATE` que falhasse aqui
+#: propagava `sqlite3.OperationalError` sem tratamento até o topo do processo
+#: worker inteiro (observado matando 3 de 4 workers do GOL, 2026-09-15).
+_BEGIN_IMMEDIATE_RETRIES = 4
+_BEGIN_IMMEDIATE_RETRY_DELAY_SECONDS = 0.5
 
 
 def connect(db_path: str) -> sqlite3.Connection:
@@ -26,8 +38,11 @@ def connect(db_path: str) -> sqlite3.Connection:
     # §16): sem isto, um segundo processo escrevendo durante uma transação de
     # outro falha imediatamente com "database is locked" em vez de esperar.
     # Comportamento single-process é idêntico ao anterior (nunca há contenção
-    # a esperar).
-    conn.execute("PRAGMA busy_timeout = 5000")
+    # a esperar). 15s (originalmente 5s) — 5s se mostrou insuficiente sob
+    # `--workers 4` em escopos grandes (ex. GOL, 290 specs): 3 dos 4 workers
+    # derrubados por "database is locked" na primeira hora de execução
+    # (2026-09-15), cada um dentro do próprio `BEGIN IMMEDIATE` deste módulo.
+    conn.execute("PRAGMA busy_timeout = 15000")
     return conn
 
 
@@ -69,7 +84,19 @@ def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     Falha nunca deixa estado intermediário visível (data-model.md §13c) —
     escritor único é suficiente para este MVP (research.md §8).
     """
-    conn.execute("BEGIN IMMEDIATE")
+    last_exc: sqlite3.OperationalError | None = None
+    for attempt in range(1, _BEGIN_IMMEDIATE_RETRIES + 1):
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            last_exc = None
+            break
+        except sqlite3.OperationalError as exc:
+            last_exc = exc
+            if attempt < _BEGIN_IMMEDIATE_RETRIES:
+                time.sleep(_BEGIN_IMMEDIATE_RETRY_DELAY_SECONDS * attempt)
+    if last_exc is not None:
+        raise last_exc
+
     try:
         yield conn
     except BaseException:

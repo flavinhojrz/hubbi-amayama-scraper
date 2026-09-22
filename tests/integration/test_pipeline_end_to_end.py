@@ -6,15 +6,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tests.support import AMAROK_CONTEXT
+from tests.unit.fakes import FakeBrowserTransport
 
 from amayama_scraper.assets.fallback import resolve_image
 from amayama_scraper.checkpoint.collection_run import CollectionRun
 from amayama_scraper.domain.discovery import DiscoveredSpecEntry
+from amayama_scraper.domain.identity import SpecIdentity
 from amayama_scraper.equivalence.cluster import build_equivalence_class
 from amayama_scraper.equivalence.evaluate import evaluate_equivalence
 from amayama_scraper.ingestion.capture_input import RawCaptureInput
 from amayama_scraper.ingestion.capture_kind import CaptureKind
-from amayama_scraper.orchestration.pipeline import CollectionInput, process_capture, run_collection
+from amayama_scraper.orchestration.collection_driver import (
+    OperationalFilters,
+    run_collection_driver,
+)
+from amayama_scraper.orchestration.pipeline import process_capture
 from amayama_scraper.persistence.adapters.filesystem_raw_blob_store import FilesystemRawBlobStore
 from amayama_scraper.persistence.adapters.sqlite_raw_capture_repository import (
     SqliteRawCaptureRepository,
@@ -26,8 +32,10 @@ from amayama_scraper.persistence.repositories.current_state_repo import get_curr
 from amayama_scraper.persistence.repositories.snapshot_repo import get_snapshot
 from amayama_scraper.persistence.repositories.spec_registry_repo import (
     find_by_model_code_and_catalog_id,
+    save_spec_identity,
 )
 from amayama_scraper.snapshots.snapshot import SnapshotState
+from amayama_scraper.transport.port import BrowserCapture
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
@@ -61,34 +69,60 @@ GROUP_HTML = """
 """
 
 
-def _collect_one_spec(conn, blob_store, capture_repo, run_id: str, spec_key: str, oem: str):
+def _capture(html: str, url: str) -> BrowserCapture:
+    return BrowserCapture(page_source=html, effective_url=url, captured_at=datetime.now(UTC))
+
+
+def _collect_one_spec(
+    conn, blob_store, capture_repo, run_id: str, *, model_code: str, catalog_id: str, oem: str
+) -> str:
+    """Registers+collects one spec end to end via `run_collection_driver()`
+    (bug fix — manifest truncado: `discover_spec_manifest()`, the only place
+    that can assemble an authoritative `manifest_complete=True` manifest, is
+    reached only through the real driver — never through direct
+    `process_capture()`/`run_collection()` capture injection, which persists
+    single-page fragments only). Returns the resolved `stable_key`."""
     group_html = GROUP_HTML.replace("1K0407151", oem)
-    save_collection_run(conn, CollectionRun(run_id=run_id))
-    captures = [
-        CollectionInput(
-            capture_input=RawCaptureInput(
-                capture_kind=CaptureKind.SPEC_NAVIGATION,
-                source_url=f"https://x/{spec_key}",
-                collected_at=datetime.now(UTC),
-                raw_content=MANIFEST_HTML.encode("utf-8"),
-                run_id=run_id,
-            ),
-            spec_key=spec_key,
+    save_collection_run(conn, CollectionRun(run_id=run_id, scope=AMAROK_CONTEXT.scope()))
+    source_url = f"https://x/{model_code}-{catalog_id}"
+    key = save_spec_identity(
+        conn,
+        SpecIdentity(
+            source="AMAYAMA",
+            manufacturer="VOLKSWAGEN",
+            vehicle_model="AMAROK",
+            market="AMA-BR",
+            model_code=model_code,
+            amayama_catalog_id=catalog_id,
+            production_period_raw="irrelevant for this test",
+            source_url=source_url,
         ),
-        CollectionInput(
-            capture_input=RawCaptureInput(
-                capture_kind=CaptureKind.GROUP_DETAIL,
-                source_url="https://x/front-axle-steering/407",
-                collected_at=datetime.now(UTC),
-                raw_content=group_html.encode("utf-8"),
-                run_id=run_id,
-            ),
-            category_slug="front-axle-steering",
-            group_id="407",
-            spec_key=spec_key,
-        ),
-    ]
-    return run_collection(conn, blob_store, capture_repo, run_id, captures, context=AMAROK_CONTEXT)
+    )
+
+    market_html = (FIXTURES / "market_index" / "same_model_code_diff_catalog.html").read_text(
+        encoding="utf-8"
+    )
+    market_url = "https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br"
+
+    transport = FakeBrowserTransport()
+    # run_collection_driver() always runs MARKET_INDEX first — its
+    # discoveries are irrelevant here (the spec was already registered
+    # directly above; spec_filter below scopes strictly to it).
+    transport.queue_navigate(_capture(market_html, market_url))
+    transport.queue_navigate(_capture(MANIFEST_HTML, source_url))
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
+    transport.queue_navigate(_capture(group_html, "https://x/front-axle-steering/407"))
+
+    run_collection_driver(
+        transport,
+        conn,
+        blob_store,
+        capture_repo,
+        run_id=run_id,
+        context=AMAROK_CONTEXT,
+        filters=OperationalFilters(spec_filter=[key]),
+    )
+    return key
 
 
 def test_full_offline_pipeline_market_index_to_equivalence_and_image_resolution(
@@ -122,23 +156,17 @@ def test_full_offline_pipeline_market_index_to_equivalence_and_image_resolution(
     stable_key = discovered[0].stable_key()
 
     # 2. SPEC_NAVIGATION + GROUP_DETAIL for TWO specs with IDENTICAL part content
-    #    -> proves equivalence (EXACT) end to end
-    for spec_key in ("spec-a", "spec-b"):
-        # source/manufacturer/vehicle_model/market precisam bater com
-        # AMAROK_CONTEXT (004: process_capture()/try_finalize_spec_entry()
-        # validam spec_key -> context antes de qualquer persistência).
-        conn.execute(
-            "INSERT OR IGNORE INTO spec_registry (stable_key, source, manufacturer, "
-            "vehicle_model, market, model_code, amayama_catalog_id, production_period_raw, "
-            "source_url) VALUES (?, 'AMAYAMA', 'VOLKSWAGEN', 'AMAROK', 'AMA-BR', "
-            "'E', 'F', 'G', 'H')",
-            (spec_key,),
-        )
-    _collect_one_spec(conn, blob_store, capture_repo, "run-a", "spec-a", oem="1K0407151")
-    _collect_one_spec(conn, blob_store, capture_repo, "run-b", "spec-b", oem="1K0407151")
+    #    -> proves equivalence (EXACT) end to end. Distinct model_code/
+    #    catalog_id so their computed stable_key()s never collide.
+    spec_a = _collect_one_spec(
+        conn, blob_store, capture_repo, "run-a", model_code="EA", catalog_id="FA", oem="1K0407151"
+    )
+    spec_b = _collect_one_spec(
+        conn, blob_store, capture_repo, "run-b", model_code="EB", catalog_id="FB", oem="1K0407151"
+    )
 
-    current_a = get_current_state(conn, "spec-a")
-    current_b = get_current_state(conn, "spec-b")
+    current_a = get_current_state(conn, spec_a)
+    current_b = get_current_state(conn, spec_b)
     assert current_a is not None
     assert current_b is not None
 
@@ -161,14 +189,14 @@ def test_full_offline_pipeline_market_index_to_equivalence_and_image_resolution(
         normalizer_version=snapshot_a.normalizer_version,
         fingerprint_version=snapshot_a.fingerprint_version,
         spec_parts_hash=snapshot_a.spec_parts_hash,
-        member_spec_refs=("spec-a", "spec-b"),
-        representative_spec_ref="spec-a",
+        member_spec_refs=(spec_a, spec_b),
+        representative_spec_ref=spec_a,
     )
     resolved = resolve_image(
-        spec_identity_ref="spec-b",
+        spec_identity_ref=spec_b,
         own_image_refs=(),
         cluster=cluster,
-        member_own_image_refs={"spec-a": ()},
+        member_own_image_refs={spec_a: ()},
     )
     assert resolved is None  # neither side has an own image in this fixture — legitimate None
 

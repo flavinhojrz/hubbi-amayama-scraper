@@ -112,6 +112,9 @@ def test_run_pool_orchestrates_market_index_then_workers_then_completes_once(
         worker_capture_repo = SqliteRawCaptureRepository(worker_conn)
         transport = FakeBrowserTransport()
         transport.queue_navigate(_capture(MANIFEST_HTML, spec_url))
+        # Bug fix (manifest truncado): the single declared category is
+        # visited on its own URL before the manifest can become complete.
+        transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
         transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
         run_worker_loop(
             transport,

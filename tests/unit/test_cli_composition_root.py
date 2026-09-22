@@ -42,3 +42,20 @@ def test_only_cli_main_imports_chrome_cdp_adapter() -> None:
         )
     ]
     assert importers == [SRC_ROOT / "cli" / "main.py"]
+
+
+def test_only_cli_main_imports_undetected_chrome_adapter() -> None:
+    """Mesma garantia de `test_only_cli_main_imports_chrome_cdp_adapter()`
+    para o segundo transporte concreto (`--own-chrome`, decisão do usuário
+    2026-09-10) — `orchestration/` continua dependendo só do Protocol
+    `BrowserTransport`."""
+    files = sorted(SRC_ROOT.rglob("*.py"))
+    importers = [
+        path
+        for path in files
+        if any(
+            name == "amayama_scraper.transport.undetected_chrome_adapter"
+            for name in _imported_module_names(path)
+        )
+    ]
+    assert importers == [SRC_ROOT / "cli" / "main.py"]

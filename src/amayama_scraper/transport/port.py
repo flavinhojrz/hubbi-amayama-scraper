@@ -22,6 +22,15 @@ from typing import Protocol
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_BACKOFF_SECONDS = 2.0
 
+#: Defaults de fetch em lote (navigate_many), validados empiricamente em
+#: spikes/batched_fetch_spike.py contra o Amayama real — mesma razão de
+#: viverem aqui (não em chrome_cdp_adapter.py): cli/options.py e
+#: orchestration/collection_driver.py/worker_pool.py precisam desses valores
+#: sem importar o adapter concreto/Selenium.
+DEFAULT_DETAIL_FETCH_BATCH_SIZE = 150
+DEFAULT_DETAIL_FETCH_CHUNK_SIZE = 3
+DEFAULT_DETAIL_FETCH_TIMEOUT_MS = 30_000
+
 
 @dataclass(frozen=True, slots=True)
 class BrowserCapture:
@@ -42,4 +51,24 @@ class BrowserTransport(Protocol):
     def current_capture(self) -> BrowserCapture:
         """Relê o estado ATUAL da página sem nova navegação — usado pelo laço
         de pausa/retomada de challenge (contracts/browser-transport-contract.md §4)."""
+        ...
+
+    def navigate_many(
+        self,
+        urls: list[str],
+        *,
+        chunk_size: int = DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+        timeout_ms: int = DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+    ) -> dict[str, BrowserCapture]:
+        """Busca várias URLs via fetch() disparado de dentro do navegador já
+        autenticado (credentials incluídas), SEM navegar a aba — mais rápido
+        e, empiricamente, muito menos sujeito a challenge que `navigate()`
+        repetido (spikes/batched_fetch_spike.py: ~5.900 requisições reais
+        contra o Amayama, 0 challenges no modo lote vs. ~90-100% no modo
+        navigate).
+
+        URLs ausentes do dict retornado (falha de rede, timeout por-URL,
+        challenge, resposta vazia) devem ser reprocessadas pelo chamador via
+        `navigate()` — este método nunca levanta por falha de UMA url, só por
+        falha de transporte total (ex.: Chrome inatingível no meio do lote)."""
         ...

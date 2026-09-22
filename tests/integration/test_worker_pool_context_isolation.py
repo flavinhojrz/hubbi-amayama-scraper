@@ -97,6 +97,9 @@ def _populate_amarok_fully(conn, blob_store, capture_repo) -> None:
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(AMAROK_MARKET_INDEX_HTML, amarok_url))
     transport.queue_navigate(_capture(MANIFEST_HTML, spec_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(
         _capture(_group_html("1K0407151"), "https://x/front-axle-steering/407")
     )
@@ -165,6 +168,10 @@ def test_gol_worker_pool_inherits_nothing_from_a_fully_populated_amarok(tmp_path
             transport = FakeBrowserTransport()
             for spec in gol_specs:
                 transport.queue_navigate(_capture(MANIFEST_HTML, spec.source_url))
+                # Bug fix (manifest truncado): the single declared category
+                # is visited on its own URL before the manifest can become
+                # complete.
+                transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
                 transport.queue_navigate(
                     _capture(_group_html(oem), "https://x/front-axle-steering/407")
                 )

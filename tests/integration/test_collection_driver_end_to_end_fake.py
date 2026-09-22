@@ -117,6 +117,10 @@ def test_full_pipeline_reaches_valid_snapshot_via_fake_transport_only(tmp_path):
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the base page's single declared category
+    # (front-axle-steering) is now also visited on its own URL before the
+    # manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_collection_driver(
@@ -149,6 +153,10 @@ def test_second_run_skips_already_valid_spec_without_any_further_navigation(tmp_
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the base page's single declared category
+    # (front-axle-steering) is now also visited on its own URL before the
+    # manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_collection_driver(
@@ -196,6 +204,10 @@ def test_force_recollects_an_already_valid_spec(tmp_path):
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the base page's single declared category
+    # (front-axle-steering) is now also visited on its own URL before the
+    # manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
     run_collection_driver(
         transport,
@@ -212,6 +224,7 @@ def test_force_recollects_an_already_valid_spec(tmp_path):
     transport_2 = FakeBrowserTransport()
     transport_2.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport_2.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    transport_2.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport_2.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_collection_driver(

@@ -1,0 +1,62 @@
+<!-- SYNTHETIC FIXTURE, structurally faithful to the real proven selectors
+     (research.md §21) and to the real Saveiro bug report used to root-cause
+     the manifest-truncation bug: base page for
+     https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297
+     declares all 10 real category slugs in .epcVariation__schemaGroups
+     (access-infotainment-miscell, body, electrics, engine,
+     front-axle-steering, fuel-exhaust-cooling, gearbox, pedals, rear-axle,
+     wheels-brakes) but .epcVariation__schemas only carries cards for 4 of
+     them (body, engine, front-axle-steering, wheels-brakes — 5 groups
+     total) — the other 6 declared categories have ZERO cards on this page,
+     exactly the real observed truncation pattern (manifest saved with 4
+     categories/5 groups when the real universe was 10 categories/75
+     groups). Not real captured HTML — synthetic, minimal, same selectors. -->
+<!DOCTYPE html>
+<html>
+<body>
+  <div class="epcVariation__details">
+    <div class="epcVariation__filters">
+      <div class="epcVariation__schemaGroups">
+        <a class="epcVariation__schemaGroup active" data-id="" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297#">All</a>
+        <a class="epcVariation__schemaGroup" data-id="0" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/access-infotainment-miscell" title="Access.,Infotainment,Miscell.">Access.,infotainment,miscell.</a>
+        <a class="epcVariation__schemaGroup" data-id="1" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/body" title="Body">Body</a>
+        <a class="epcVariation__schemaGroup" data-id="2" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/electrics" title="Electrics">Electrics</a>
+        <a class="epcVariation__schemaGroup" data-id="3" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/engine" title="Engine">Engine</a>
+        <a class="epcVariation__schemaGroup" data-id="4" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/front-axle-steering" title="Front axle, steering">Front axle, steering</a>
+        <a class="epcVariation__schemaGroup" data-id="5" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/fuel-exhaust-cooling" title="Fuel, exhaust, cooling">Fuel, exhaust, cooling</a>
+        <a class="epcVariation__schemaGroup" data-id="6" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/gearbox" title="Gearbox">Gearbox</a>
+        <a class="epcVariation__schemaGroup" data-id="7" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/pedals" title="Pedals">Pedals</a>
+        <a class="epcVariation__schemaGroup" data-id="8" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/rear-axle" title="Rear axle">Rear axle</a>
+        <a class="epcVariation__schemaGroup" data-id="9" href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/wheels-brakes" title="Wheels, brakes">Wheels, brakes</a>
+      </div>
+    </div>
+    <div class="epcVariation__schemas">
+      <div class="epcVariation__schema" data-id="800">
+        <div class="epcVariation__schema-name">
+          <a href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/body/800">800 - body</a>
+        </div>
+      </div>
+      <div class="epcVariation__schema" data-id="100">
+        <div class="epcVariation__schema-name">
+          <a href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/engine/100">100 - base engine</a>
+        </div>
+      </div>
+      <div class="epcVariation__schema" data-id="407">
+        <div class="epcVariation__schema-name">
+          <a href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/front-axle-steering/407">407 - wishbone; wheel bearing housing; drive shaft</a>
+        </div>
+      </div>
+      <div class="epcVariation__schema" data-id="409">
+        <div class="epcVariation__schema-name">
+          <a href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/front-axle-steering/409">409 - final drive, complete; gear housing</a>
+        </div>
+      </div>
+      <div class="epcVariation__schema" data-id="500">
+        <div class="epcVariation__schema-name">
+          <a href="https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br/5x96f4-45297/wheels-brakes/500">500 - wheel, tire</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

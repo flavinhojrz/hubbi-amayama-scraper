@@ -217,6 +217,10 @@ def test_already_elapsed_time_reduces_or_removes_the_wait(tmp_path):
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, _URL_62184))
+    # Manifest discovery visits the single declared category on its own URL
+    # too (bug fix — a base page alone never proves completeness) before
+    # limit_groups=0 has anything to truncate.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
 
     # 15s of "real work" elapse between navigations on every now() call.
     now, _advance = _clock(datetime(2026, 8, 29, tzinfo=UTC), step_seconds=15.0)
@@ -255,6 +259,7 @@ def test_min_interval_is_independent_of_transport_retry_backoff(tmp_path):
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, _URL_62184))
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
 
     now, advance = _clock(datetime(2026, 8, 29, tzinfo=UTC))
     sleep_calls: list[float] = []
@@ -276,6 +281,7 @@ def test_min_interval_is_independent_of_transport_retry_backoff(tmp_path):
         sleep=fake_sleep,
         now=now,
     )
-    # exactly one throttle sleep (2nd navigation), using min_interval (5.0),
-    # never poll_interval (999.0) — they are never conflated.
-    assert sleep_calls == [5.0]
+    # 2 throttle sleeps (base SPEC_NAVIGATION + its one declared category's
+    # own page, both after the first/MARKET_INDEX navigation), always using
+    # min_interval (5.0), never poll_interval (999.0) — never conflated.
+    assert sleep_calls == [5.0, 5.0]

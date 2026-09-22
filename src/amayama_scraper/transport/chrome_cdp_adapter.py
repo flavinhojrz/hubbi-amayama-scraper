@@ -26,6 +26,10 @@ from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 
+from amayama_scraper.transport.browser_fetch_js import (
+    MAX_URLS_PER_SCRIPT_CALL,
+    render_batch_fetch_js,
+)
 from amayama_scraper.transport.errors import (
     ChromeNotReachableError,
     NavigationFailedError,
@@ -34,6 +38,8 @@ from amayama_scraper.transport.errors import (
 )
 from amayama_scraper.transport.port import (
     DEFAULT_BACKOFF_SECONDS,
+    DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
     DEFAULT_MAX_RETRIES,
     BrowserCapture,
 )
@@ -67,6 +73,8 @@ class _SeleniumDriverLike(Protocol):
     current_url: str
 
     def get(self, url: str) -> None: ...
+    def execute_async_script(self, script: str, *args: object) -> object: ...
+    def set_script_timeout(self, time_to_wait: float) -> None: ...
 
 
 class ChromeCdpTransport:
@@ -109,6 +117,53 @@ class ChromeCdpTransport:
 
     def current_capture(self) -> BrowserCapture:
         return self._with_retry(self._read_current)
+
+    def navigate_many(
+        self,
+        urls: list[str],
+        *,
+        chunk_size: int = DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+        timeout_ms: int = DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+    ) -> dict[str, BrowserCapture]:
+        if not urls:
+            return {}
+        js = render_batch_fetch_js(chunk_size=chunk_size, timeout_ms=timeout_ms)
+        results: dict[str, BrowserCapture] = {}
+        for start in range(0, len(urls), MAX_URLS_PER_SCRIPT_CALL):
+            sub_batch = urls[start : start + MAX_URLS_PER_SCRIPT_CALL]
+            n_chunks = -(-len(sub_batch) // chunk_size)  # ceil, sem depender de math
+            script_timeout_s = n_chunks * (timeout_ms / 1000.0) + 60
+            raw = self._fetch_many_with_retry(sub_batch, js, script_timeout_s)
+            captured_at = datetime.now(UTC)
+            for url, entry in raw.items():
+                results[url] = BrowserCapture(
+                    page_source=entry["html"],
+                    effective_url=entry.get("url") or url,
+                    captured_at=captured_at,
+                )
+        return results
+
+    def _fetch_many_with_retry(
+        self, sub_batch: list[str], js: str, script_timeout_s: float
+    ) -> dict[str, dict[str, str]]:
+        """Retry só para falha de transporte TOTAL do lote (ex.: sessão CDP
+        caiu no meio da chamada) — nunca por falha de uma URL individual
+        dentro do lote, que já é tratada dentro do próprio JS (AbortController
+        por-URL) e simplesmente fica ausente do dict retornado."""
+        last_exc: NavigationFailedError | None = None
+        for attempt in range(1, self._max_retries + 1):
+            try:
+                self._driver.set_script_timeout(script_timeout_s)
+                raw = self._driver.execute_async_script(js, *sub_batch)
+                return raw or {}  # type: ignore[return-value]
+            except WebDriverException as exc:
+                last_exc = NavigationFailedError(
+                    f"navigate_many failed for {len(sub_batch)} url(s): {exc}"
+                )
+                if attempt < self._max_retries:
+                    self._sleep(self._backoff_seconds * attempt)
+        assert last_exc is not None  # noqa: S101 - loop always sets it before exhausting max_retries >= 1
+        raise last_exc
 
     def _navigate_once(self, url: str) -> BrowserCapture:
         try:

@@ -119,6 +119,13 @@ def test_only_manifest_groups_are_navigated_and_rejection_is_not_retried_automat
     t1 = FakeBrowserTransport()
     t1.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): both declared categories (engine,
+    # front-axle-steering — visited in that sorted order by
+    # discover_spec_manifest()) are each visited on their own URL before the
+    # manifest can become complete; MANIFEST_HTML already has both categories'
+    # cards, so it doubles as a valid response for either category's page.
+    t1.queue_navigate(_capture(MANIFEST_HTML, "https://x/engine"))
+    t1.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     t1.queue_navigate(_capture(INVALID_GROUP_HTML, "https://x/engine/100"))
     t1.queue_navigate(_capture(VALID_GROUP_HTML, "https://x/front-axle-steering/407"))
     run_collection_driver(
@@ -136,9 +143,16 @@ def test_only_manifest_groups_are_navigated_and_rejection_is_not_retried_automat
     assert accepted is not None and accepted.status.value == "ACCEPTED"
     assert rejected is not None and rejected.status.value == "REJECTED"
 
-    # exactly the two manifest URLs were navigated for GROUP_DETAIL — never
-    # anything outside the manifest.
-    group_calls = [u for u in t1.navigate_calls if u not in (MARKET_INDEX_URL, _SPEC_URL)]
+    # exactly the two manifest group URLs were navigated for GROUP_DETAIL —
+    # never anything outside the manifest (category-page visits are a
+    # separate, earlier phase, excluded here on purpose).
+    non_group_urls = {
+        MARKET_INDEX_URL,
+        _SPEC_URL,
+        "https://x/engine",
+        "https://x/front-axle-steering",
+    }
+    group_calls = [u for u in t1.navigate_calls if u not in non_group_urls]
     assert set(group_calls) == {"https://x/front-axle-steering/407", "https://x/engine/100"}
 
     # Pass 2: no --retry-rejected — the rejected group must NOT be renavigated.

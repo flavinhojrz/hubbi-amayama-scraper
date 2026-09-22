@@ -106,6 +106,9 @@ def test_challenge_on_second_spec_does_not_disturb_first_specs_valid_snapshot(tm
     t1b = FakeBrowserTransport()
     t1b.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1b.queue_navigate(_capture(MANIFEST_HTML, _URL_62184))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    t1b.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     t1b.queue_navigate(_capture(_group_html("1K0407151"), "https://x/front-axle-steering/407"))
     run_collection_driver(
         t1b,
@@ -126,6 +129,9 @@ def test_challenge_on_second_spec_does_not_disturb_first_specs_valid_snapshot(tm
     t2 = FakeBrowserTransport()
     t2.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t2.queue_navigate(_capture(MANIFEST_HTML, _URL_61189))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    t2.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     t2.queue_current_capture(_capture(CHALLENGE_HTML, "https://x/front-axle-steering/407"))
     t2.queue_current_capture(
         _capture(_group_html("1K0407152"), "https://x/front-axle-steering/407")

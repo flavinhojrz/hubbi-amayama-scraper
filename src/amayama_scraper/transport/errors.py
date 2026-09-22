@@ -17,6 +17,12 @@ class ChromeNotReachableError(TransportError):
     """O endpoint CDP configurado não responde (research.md §4)."""
 
 
+class ChromeLaunchFailedError(TransportError):
+    """`undetected_chrome_adapter.py` não conseguiu iniciar seu próprio
+    Chrome (binário ausente, perfil corrompido, todas as tentativas de
+    retry esgotadas)."""
+
+
 class NavigationTimeoutError(TransportError):
     """A navegação não completou dentro do timeout interno do adapter."""
 

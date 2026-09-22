@@ -136,6 +136,9 @@ def test_throttled_worker_stays_alive_and_resumes_once_concurrency_recovers(
 
     transport_b = FakeBrowserTransport()
     transport_b.queue_navigate(_capture(MANIFEST_HTML, spec_b.source_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport_b.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport_b.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_worker_loop(
@@ -166,4 +169,8 @@ def test_throttled_worker_stays_alive_and_resumes_once_concurrency_recovers(
 
     # spec-A nunca foi tocada por worker-B (permanece sob o lease de worker-A).
     assert lease_repo.get_lease_owner(conn, run_id="run-1", spec_key=key_a) == "worker-A"
-    assert transport_b.navigate_calls == [spec_b.source_url, "https://x/front-axle-steering/407"]
+    assert transport_b.navigate_calls == [
+        spec_b.source_url,
+        "https://x/front-axle-steering",
+        "https://x/front-axle-steering/407",
+    ]

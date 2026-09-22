@@ -31,7 +31,7 @@ from amayama_scraper.persistence.db import connect
 from amayama_scraper.persistence.migrations.runner import run_migrations
 from amayama_scraper.persistence.repositories.checkpoint_repo import save_collection_run
 from amayama_scraper.persistence.repositories.current_state_repo import get_current_state
-from amayama_scraper.persistence.repositories.manifest_repo import get_authoritative
+from amayama_scraper.persistence.repositories.manifest_repo import get_authoritative, get_latest
 from amayama_scraper.persistence.repositories.spec_registry_repo import (
     list_by_scope,
     save_spec_identity,
@@ -419,7 +419,13 @@ def test_scenario_spec_registered_and_belonging_to_context_still_works_normally(
     )
 
     assert result.critical_error is False
-    assert get_authoritative(conn, gol_spec_key, "run-gol") is not None
+    # A single SPEC_NAVIGATION capture is never authoritative by itself (bug
+    # fix — manifest truncado: completeness requires visiting every declared
+    # category individually, orchestration/collection_driver.py::
+    # discover_spec_manifest()) — this test only checks that context
+    # validation let the fragment persist normally, via get_latest().
+    assert get_authoritative(conn, gol_spec_key, "run-gol") is None
+    assert get_latest(conn, gol_spec_key, "run-gol") is not None
 
 
 # --- Hardening final (004): capture_input.run_id != run_id -----------------
@@ -518,4 +524,6 @@ def test_capture_input_run_id_matching_run_id_continues_to_work_normally(tmp_pat
 
     assert result.critical_error is False
     assert _raw_capture_count(conn) == 1
-    assert get_authoritative(conn, gol_spec_key, "run-gol") is not None
+    # Same as above: one page is never authoritative alone (bug fix).
+    assert get_authoritative(conn, gol_spec_key, "run-gol") is None
+    assert get_latest(conn, gol_spec_key, "run-gol") is not None

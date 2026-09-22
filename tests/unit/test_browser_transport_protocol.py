@@ -22,6 +22,16 @@ class _MinimalTransport:
             captured_at=datetime.now(UTC),
         )
 
+    def navigate_many(
+        self, urls: list[str], *, chunk_size: int = 3, timeout_ms: int = 30_000
+    ) -> dict[str, BrowserCapture]:
+        return {
+            url: BrowserCapture(
+                page_source="<html></html>", effective_url=url, captured_at=datetime.now(UTC)
+            )
+            for url in urls
+        }
+
 
 def _accepts_transport(transport: BrowserTransport) -> BrowserCapture:
     return transport.navigate("https://example.com")
@@ -35,4 +45,4 @@ def test_minimal_object_satisfies_browser_transport_protocol() -> None:
 
 def test_protocol_exposes_exactly_navigate_and_current_capture() -> None:
     members = {name for name in dir(BrowserTransport) if not name.startswith("_")}
-    assert members == {"navigate", "current_capture"}
+    assert members == {"navigate", "current_capture", "navigate_many"}

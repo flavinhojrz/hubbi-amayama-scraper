@@ -66,6 +66,7 @@ tasks.md "Fase 9"/"Fase 10: Hardening pós-review"):
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sqlite3
 import time
@@ -84,6 +85,7 @@ from amayama_scraper.orchestration.collection_driver import (
     apply_operational_filters,
     process_one_spec,
     run_market_index_phase,
+    run_spec_navigation_batch_phase,
 )
 from amayama_scraper.orchestration.collection_driver import (
     _maybe_mark_run_completed as maybe_mark_run_completed,
@@ -111,7 +113,13 @@ from amayama_scraper.persistence.repositories.checkpoint_repo import get_collect
 from amayama_scraper.persistence.repositories.current_state_repo import get_current_state
 from amayama_scraper.persistence.repositories.spec_registry_repo import list_by_scope
 from amayama_scraper.snapshots.snapshot import SpecSnapshot
-from amayama_scraper.transport.port import BrowserCapture, BrowserTransport
+from amayama_scraper.transport.port import (
+    DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+    BrowserCapture,
+    BrowserTransport,
+)
 
 _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS = 5.0
 _DEFAULT_MIN_INTERVAL_SECONDS = 0.0
@@ -387,6 +395,43 @@ def _make_fenced_finalize(
 
 # --- Instrumentação de challenge/rate-limiter/heartbeat/renovação (US3, US4) -
 
+#: Retries locais só para "database is locked" (contenção transitória de
+#: escrita sob `--workers 4` em escopos grandes, ex. GOL — 290 specs) na
+#: renovação de lease, chamada a cada evento (`on_event`, potencialmente
+#: dezenas de vezes por spec). Nunca reinterpreta a exceção como perda de
+#: lease (`LeaseFencingError` continua sendo o único sinal disso) — só dá
+#: mais chances de a MESMA renovação completar antes de desistir.
+_RENEW_LEASE_LOCK_RETRIES = 3
+_RENEW_LEASE_LOCK_RETRY_DELAY_SECONDS = 0.5
+
+
+def _renew_lease_with_lock_retry(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    spec_key: str,
+    owner: str,
+    now: datetime,
+    lease_seconds: float,
+) -> int | None:
+    last_exc: sqlite3.OperationalError | None = None
+    for attempt in range(1, _RENEW_LEASE_LOCK_RETRIES + 1):
+        try:
+            return lease_repo.renew_lease(
+                conn,
+                run_id=run_id,
+                spec_key=spec_key,
+                owner=owner,
+                now=now,
+                lease_seconds=lease_seconds,
+            )
+        except sqlite3.OperationalError as exc:
+            last_exc = exc
+            if attempt < _RENEW_LEASE_LOCK_RETRIES:
+                time.sleep(_RENEW_LEASE_LOCK_RETRY_DELAY_SECONDS * attempt)
+    assert last_exc is not None  # noqa: S101 - loop always sets it before exhausting retries
+    raise last_exc
+
 
 def _instrumented_on_event(
     conn: sqlite3.Connection,
@@ -412,7 +457,7 @@ def _instrumented_on_event(
         moment = now()
         spec_key = held.get("spec_key")
         if spec_key is not None:
-            new_token = lease_repo.renew_lease(
+            new_token = _renew_lease_with_lock_retry(
                 conn,
                 run_id=run_id,
                 spec_key=str(spec_key),
@@ -486,6 +531,10 @@ def run_worker_loop(
     poll_interval: float = _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS,
     challenge_timeout: float | None = None,
     min_interval: float = _DEFAULT_MIN_INTERVAL_SECONDS,
+    enable_detail_batch_fetch: bool = False,
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    detail_fetch_chunk_size: int = DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    detail_fetch_timeout_ms: int = DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     on_event: Callable[..., None] = lambda event, **kwargs: None,
@@ -536,25 +585,57 @@ def run_worker_loop(
         last_navigate_at = now()
         return capture
 
+    def throttled_navigate_many(urls: list[str]) -> dict[str, BrowserCapture]:
+        nonlocal last_navigate_at
+        if min_interval > 0 and last_navigate_at is not None:
+            elapsed = (now() - last_navigate_at).total_seconds()
+            remaining = min_interval - elapsed
+            if remaining > 0:
+                sleep(remaining)
+        captures = transport.navigate_many(
+            urls, chunk_size=detail_fetch_chunk_size, timeout_ms=detail_fetch_timeout_ms
+        )
+        last_navigate_at = now()
+        return captures
+
     while True:
         if stop_event is not None and stop_event.is_set():
             on_event("WORKER_STOPPING", worker_id=worker_id, reason="stop_event")
             return
 
         moment = now()
-        worker_heartbeat_repo.upsert_heartbeat(
-            conn, run_id=run_id, worker_id=worker_id, pid=os.getpid(), now=moment
-        )
-        result = next_claimable_spec(
-            conn,
-            run_id=run_id,
-            context=context,
-            worker_id=worker_id,
-            filters=filters,
-            pool_config=pool_config,
-            pool_session_id=pool_session_id,
-            now=moment,
-        )
+        # Heartbeat é puramente informativo (worker_heartbeat_repo.py) — nunca
+        # participa de decisão de claim/lease. Sob contenção de escrita entre 4
+        # workers (escopos grandes, ex. GOL), perder UMA atualização de heartbeat
+        # nunca deve derrubar o worker inteiro; a próxima iteração tenta de novo.
+        with contextlib.suppress(sqlite3.OperationalError):
+            worker_heartbeat_repo.upsert_heartbeat(
+                conn, run_id=run_id, worker_id=worker_id, pid=os.getpid(), now=moment
+            )
+        try:
+            result = next_claimable_spec(
+                conn,
+                run_id=run_id,
+                context=context,
+                worker_id=worker_id,
+                filters=filters,
+                pool_config=pool_config,
+                pool_session_id=pool_session_id,
+                now=moment,
+            )
+        except sqlite3.OperationalError:
+            # Sob contenção de escrita entre 4 workers (escopos grandes, ex.
+            # GOL: BEGIN IMMEDIATE de até 4 processos disputando claim/rate-
+            # limiter ao mesmo tempo), o `BEGIN IMMEDIATE` desta transação pode
+            # estourar mesmo o `busy_timeout` da conexão. Nada foi commitado —
+            # `transaction()` sempre faz ROLLBACK antes de propagar — então é
+            # seguro tratar exatamente como "sem slot agora": o worker
+            # permanece vivo e tenta de novo na próxima iteração, em vez de
+            # derrubar o processo inteiro por uma tentativa de claim que nunca
+            # chegou a escrever nada.
+            on_event("WORKER_THROTTLED_WAITING_FOR_SLOT", worker_id=worker_id)
+            sleep(poll_interval)
+            continue
         if result.claimed is None:
             if result.throttled:
                 on_event("WORKER_THROTTLED_WAITING_FOR_SLOT", worker_id=worker_id)
@@ -579,6 +660,10 @@ def run_worker_loop(
                 spec=spec,
                 filters=filters,
                 throttled_navigate=throttled_navigate,
+                throttled_navigate_many=(
+                    throttled_navigate_many if enable_detail_batch_fetch else None
+                ),
+                detail_fetch_batch_size=detail_fetch_batch_size,
                 poll_interval=poll_interval,
                 challenge_timeout=challenge_timeout,
                 sleep=sleep,
@@ -641,6 +726,17 @@ class WorkerProcessArgs:
     poll_interval: float
     challenge_timeout: float | None
     min_interval: float
+    enable_detail_batch_fetch: bool = False
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE
+    detail_fetch_chunk_size: int = DEFAULT_DETAIL_FETCH_CHUNK_SIZE
+    detail_fetch_timeout_ms: int = DEFAULT_DETAIL_FETCH_TIMEOUT_MS
+    #: Quando True, o entrypoint do worker constrói `UndetectedChromeTransport`
+    #: (Chrome próprio, resolve CAPTCHA automaticamente) em vez de
+    #: `ChromeCdpTransport` (anexa a `cdp_host`/`cdp_port`) — decisão do
+    #: usuário, 2026-09-10. `cdp_host`/`cdp_port` continuam presentes mas são
+    #: ignorados pelo entrypoint nesse modo.
+    own_chrome: bool = False
+    chrome_headless: bool = False
 
 
 def worker_id_for(run_id: str, worker_index: int, pid: int) -> str:
@@ -693,6 +789,12 @@ def run_pool(
     poll_interval: float = _DEFAULT_CHALLENGE_POLL_INTERVAL_SECONDS,
     challenge_timeout: float | None = None,
     min_interval: float = _DEFAULT_MIN_INTERVAL_SECONDS,
+    enable_detail_batch_fetch: bool = False,
+    detail_fetch_batch_size: int = DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    detail_fetch_chunk_size: int = DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    detail_fetch_timeout_ms: int = DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+    own_chrome: bool = False,
+    chrome_headless: bool = False,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     on_event: Callable[..., None] = lambda event, **kwargs: None,
@@ -763,6 +865,19 @@ def run_pool(
         last_navigate_at = now()
         return capture
 
+    def throttled_navigate_many(urls: list[str]) -> dict[str, BrowserCapture]:
+        nonlocal last_navigate_at
+        if min_interval > 0 and last_navigate_at is not None:
+            elapsed = (now() - last_navigate_at).total_seconds()
+            remaining = min_interval - elapsed
+            if remaining > 0:
+                sleep(remaining)
+        captures = transport.navigate_many(
+            urls, chunk_size=detail_fetch_chunk_size, timeout_ms=detail_fetch_timeout_ms
+        )
+        last_navigate_at = now()
+        return captures
+
     proceeded = run_market_index_phase(
         transport,
         conn,
@@ -789,6 +904,32 @@ def run_pool(
     selected = apply_operational_filters(all_specs, filters)
     on_event("RUN_STARTED", discovered=len(all_specs), selected=len(selected))
 
+    if enable_detail_batch_fetch:
+        # Bug fix (CAPTCHA excessivo): busca em lote a base page de toda
+        # spec elegível ANTES de reivindicar qualquer spec pra um worker —
+        # sempre no orquestrador, sequencial, nunca paralelizada (mesmo
+        # espírito de MARKET_INDEX acima). Nunca das que serão puladas por
+        # já VALID (mesmo filtro que next_claimable_spec() aplica).
+        eligible_for_batch = [
+            spec
+            for spec in selected
+            if get_current_state(conn, spec.stable_key()) is None
+            or spec.stable_key() in filters.force
+        ]
+        run_spec_navigation_batch_phase(
+            transport,
+            conn,
+            blob_store,
+            capture_repo,
+            run_id=run_id,
+            context=context,
+            specs=eligible_for_batch,
+            filters=filters,
+            throttled_navigate_many=throttled_navigate_many,
+            detail_fetch_batch_size=detail_fetch_batch_size,
+            on_event=orchestrator_on_event,
+        )
+
     pool_session_id = str(uuid.uuid4())
 
     workers: list[tuple[int, int, _ProcessHandle]] = []
@@ -808,6 +949,12 @@ def run_pool(
                 poll_interval=poll_interval,
                 challenge_timeout=challenge_timeout,
                 min_interval=min_interval,
+                enable_detail_batch_fetch=enable_detail_batch_fetch,
+                detail_fetch_batch_size=detail_fetch_batch_size,
+                detail_fetch_chunk_size=detail_fetch_chunk_size,
+                detail_fetch_timeout_ms=detail_fetch_timeout_ms,
+                own_chrome=own_chrome,
+                chrome_headless=chrome_headless,
             )
             handle = process_factory(worker_target, args, stop_event)
             # 005 hardening (HIGH — race entre Process.start() e registro do

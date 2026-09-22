@@ -10,7 +10,13 @@ from __future__ import annotations
 
 import argparse
 
-from amayama_scraper.transport.port import DEFAULT_BACKOFF_SECONDS, DEFAULT_MAX_RETRIES
+from amayama_scraper.transport.port import (
+    DEFAULT_BACKOFF_SECONDS,
+    DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+    DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+    DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+    DEFAULT_MAX_RETRIES,
+)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -80,6 +86,31 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Inclui unidades REQUIRES_EXPLICIT_RETRY nesta passada (DEC-006).",
     )
     run_parser.add_argument(
+        "--repair-manifest",
+        action="store_true",
+        help=(
+            "Repair/backfill: redescobre o manifesto categoria-a-categoria para specs já "
+            "existentes no escopo (--manufacturer/--vehicle-model/--market), mesmo com um "
+            "manifesto anterior já marcado manifest_complete=1 — nunca apaga checkpoints "
+            "ACCEPTED, só grupos ainda ausentes viram trabalho pendente. Reabre o "
+            "CollectionRun mais recente do escopo (limpa completed_at) em vez de criar um "
+            "run novo, preservando o progresso já aceito. --resume/--new-run são ignorados "
+            "com este flag (incompatível com a seleção de run normal)."
+        ),
+    )
+    run_parser.add_argument(
+        "--repair-all-scopes",
+        action="store_true",
+        help=(
+            "Só com --repair-manifest: repara TODO escopo (vehicle_model/market) já "
+            "coletado sob --manufacturer, em vez de apenas --vehicle-model/--market — "
+            "deriva a lista diretamente dos CollectionRun já existentes no banco (nenhum "
+            "arquivo/lista externa necessária). Repara Volkswagen BR inteiro: "
+            "--manufacturer VOLKSWAGEN --repair-manifest --repair-all-scopes (mercados são "
+            "parte de cada scope já persistido, não precisam ser listados)."
+        ),
+    )
+    run_parser.add_argument(
         "--force",
         action="append",
         default=None,
@@ -115,6 +146,23 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     run_parser.add_argument("--db-path", default=None, metavar="PATH")
     run_parser.add_argument("--raw-root", default=None, metavar="PATH")
+
+    run_parser.add_argument(
+        "--own-chrome",
+        action="store_true",
+        help=(
+            "Usa transport/undetected_chrome_adapter.py: cada worker lança seu PRÓPRIO "
+            "Chrome (perfil herdado do operador) em vez de anexar a um Chrome já aberto "
+            "(--cdp-host/--cdp-port, comportamento default) — e "
+            "resolve reCAPTCHA automaticamente via CAPTCHA_API_URL/TOKEN_API quando "
+            "configurados (sem isso, challenge ainda aguarda o operador na janela visível)."
+        ),
+    )
+    run_parser.add_argument(
+        "--chrome-headless",
+        action="store_true",
+        help="Só com --own-chrome: roda o Chrome próprio sem janela visível.",
+    )
 
     run_parser.add_argument(
         "--workers",
@@ -172,6 +220,37 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=30.0,
         metavar="SECONDS",
         help="Intervalo entre relatórios de métricas do orquestrador (005 FR-070).",
+    )
+
+    run_parser.add_argument(
+        "--no-detail-batch-fetch",
+        action="store_true",
+        help=(
+            "Desliga o fetch em lote de GROUP_DETAIL (validado em spikes/batched_fetch_spike.py: "
+            "~5.900 requisições reais contra o Amayama, 0 challenges em modo lote vs. ~90-100%% "
+            "em modo navigate único) — volta ao navigate() único por grupo. Ligado por padrão."
+        ),
+    )
+    run_parser.add_argument(
+        "--detail-fetch-batch-size",
+        type=int,
+        default=DEFAULT_DETAIL_FETCH_BATCH_SIZE,
+        metavar="N",
+        help="Grupos pendentes buscados por chamada de fetch em lote.",
+    )
+    run_parser.add_argument(
+        "--detail-fetch-chunk-size",
+        type=int,
+        default=DEFAULT_DETAIL_FETCH_CHUNK_SIZE,
+        metavar="N",
+        help="Concorrência (fetch() simultâneos) dentro de cada chamada de fetch em lote.",
+    )
+    run_parser.add_argument(
+        "--detail-fetch-timeout-ms",
+        type=int,
+        default=DEFAULT_DETAIL_FETCH_TIMEOUT_MS,
+        metavar="MS",
+        help="Timeout por URL individual dentro do fetch em lote.",
     )
 
     return parser

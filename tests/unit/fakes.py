@@ -69,13 +69,20 @@ class FakeBrowserTransport:
     """
 
     navigate_calls: list[str] = field(default_factory=list)
+    navigate_many_calls: list[list[str]] = field(default_factory=list)
     current_capture_calls: int = 0
     _navigate_queue: deque[BrowserCapture | Exception] = field(default_factory=deque)
+    _navigate_many_queue: deque[dict[str, BrowserCapture] | Exception] = field(
+        default_factory=deque
+    )
     _current_capture_queue: deque[BrowserCapture | Exception] = field(default_factory=deque)
     _last_capture: BrowserCapture | None = None
 
     def queue_navigate(self, item: BrowserCapture | Exception) -> None:
         self._navigate_queue.append(item)
+
+    def queue_navigate_many(self, item: dict[str, BrowserCapture] | Exception) -> None:
+        self._navigate_many_queue.append(item)
 
     def queue_current_capture(self, item: BrowserCapture | Exception) -> None:
         self._current_capture_queue.append(item)
@@ -90,6 +97,19 @@ class FakeBrowserTransport:
         if isinstance(item, Exception):
             raise item
         self._last_capture = item
+        return item
+
+    def navigate_many(
+        self, urls: list[str], *, chunk_size: int = 3, timeout_ms: int = 30_000
+    ) -> dict[str, BrowserCapture]:
+        self.navigate_many_calls.append(list(urls))
+        if not self._navigate_many_queue:
+            raise AssertionError(
+                f"FakeBrowserTransport.navigate_many({urls!r}) called with no queued response"
+            )
+        item = self._navigate_many_queue.popleft()
+        if isinstance(item, Exception):
+            raise item
         return item
 
     def current_capture(self) -> BrowserCapture:

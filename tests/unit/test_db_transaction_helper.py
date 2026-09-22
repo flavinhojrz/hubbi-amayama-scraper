@@ -45,7 +45,7 @@ def test_partial_writes_within_failed_transaction_are_not_visible():
 def test_connect_sets_busy_timeout_for_multi_process_contention():
     conn = connect(":memory:")
     (timeout_ms,) = conn.execute("PRAGMA busy_timeout").fetchone()
-    assert timeout_ms == 5000
+    assert timeout_ms == 15000
 
 
 def test_connect_still_sets_foreign_keys_and_wal_unchanged_by_busy_timeout_addition():

@@ -110,6 +110,9 @@ def test_worker_a_never_persists_after_worker_b_takeover_and_b_continues_normall
     # (será tentado, mas deve ser REJEITADO pelo fencing).
     transport_a = FakeBrowserTransport()
     transport_a.queue_navigate(_capture(MANIFEST_HTML_TWO_GROUPS, spec.source_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport_a.queue_navigate(_capture(MANIFEST_HTML_TWO_GROUPS, "https://x/front-axle-steering"))
     transport_a.queue_navigate(
         _capture(_group_html("1K0407151"), "https://x/front-axle-steering/407")
     )

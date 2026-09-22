@@ -103,9 +103,11 @@ def list_for_spec(conn: sqlite3.Connection, spec_key: str) -> list[tuple[str, Sp
     return [(row["run_id"], _row_to_manifest(row)) for row in rows]
 
 
-def get_authoritative(
-    conn: sqlite3.Connection, spec_key: str, run_id: str
-) -> SpecGroupManifest | None:
+def get_latest(conn: sqlite3.Connection, spec_key: str, run_id: str) -> SpecGroupManifest | None:
+    """Most recent manifest row for (spec_key, run_id), regardless of
+    `manifest_complete` — used by `discover_spec_manifest()` to read back the
+    base-page fragment it just saved (never authoritative by itself, see
+    parsing/spec_group_manifest.py) for its `declared_category_urls`."""
     row = conn.execute(
         """
         SELECT * FROM spec_group_manifest
@@ -114,7 +116,11 @@ def get_authoritative(
         """,
         (spec_key, run_id),
     ).fetchone()
-    if row is None:
-        return None
-    manifest = _row_to_manifest(row)
+    return _row_to_manifest(row) if row is not None else None
+
+
+def get_authoritative(
+    conn: sqlite3.Connection, spec_key: str, run_id: str
+) -> SpecGroupManifest | None:
+    manifest = get_latest(conn, spec_key, run_id)
     return manifest if is_manifest_authoritative(manifest) else None

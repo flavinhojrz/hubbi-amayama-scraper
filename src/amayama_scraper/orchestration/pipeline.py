@@ -39,6 +39,7 @@ from amayama_scraper.persistence.adapters.snapshot_adapters import (
     SqliteSnapshotRepositoryAdapter,
 )
 from amayama_scraper.persistence.db import run_in_transaction as db_run_in_transaction
+from amayama_scraper.persistence.repositories.category_visit_repo import upsert_category_visit
 from amayama_scraper.persistence.repositories.checkpoint_repo import get_collection_run
 from amayama_scraper.persistence.repositories.manifest_repo import save_manifest
 from amayama_scraper.persistence.repositories.spec_registry_repo import (
@@ -153,6 +154,18 @@ def process_capture(
             spec_key=spec_key,
             category_slug=category_slug,
             group_id=group_id,
+            raw_capture_id=raw_capture.capture_id,
+            raw_content=capture_input.raw_content,
+            accepted=accepted,
+            validation_outcome=validation.primary_outcome,
+        )
+
+    if capture_input.capture_kind is CaptureKind.SPEC_CATEGORY_DETAIL:
+        return _route_spec_category_detail(
+            conn,
+            run_id=run_id,
+            spec_key=spec_key,
+            category_slug=category_slug,
             raw_capture_id=raw_capture.capture_id,
             raw_content=capture_input.raw_content,
             accepted=accepted,
@@ -290,6 +303,92 @@ def _route_group_detail(
         group_id=group_id,
         event=CheckpointEvent.ACCEPT,
         raw_capture_id=raw_capture_id,
+    )
+    return ProcessCaptureResult(
+        capture_id=raw_capture_id, validation_outcome=validation_outcome, routed_to_parser=True
+    )
+
+
+def _route_spec_category_detail(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    spec_key: str | None,
+    category_slug: str | None,
+    raw_capture_id: str,
+    raw_content: bytes,
+    accepted: bool,
+    validation_outcome: ValidationOutcome,
+) -> ProcessCaptureResult:
+    """Bug fix (manifest truncado): rota de UMA categoria declarada visitada
+    na sua própria URL — nunca escreve em `checkpoint_entry` (ver
+    persistence/repositories/category_visit_repo.py, motivo). Reaproveita o
+    mesmo parser de SPEC_NAVIGATION (`parse_spec_group_manifest()` —
+    estrutura idêntica), restrito aos grupos da categoria pedida; os
+    encontrados ficam em `evidence["groups"]` do visit ACCEPTED, para
+    `discover_spec_manifest()` montar o manifesto sem precisar reparsear."""
+    assert spec_key is not None and category_slug is not None, (
+        "spec_key/category_slug required to route a SPEC_CATEGORY_DETAIL capture"
+    )
+    upsert_category_visit(
+        conn,
+        run_id=run_id,
+        spec_key=spec_key,
+        category_slug=category_slug,
+        event=CheckpointEvent.START_ATTEMPT,
+    )
+
+    if not accepted:
+        upsert_category_visit(
+            conn,
+            run_id=run_id,
+            spec_key=spec_key,
+            category_slug=category_slug,
+            event=CheckpointEvent.REJECT,
+            evidence={"outcome": validation_outcome.value},
+        )
+        return ProcessCaptureResult(
+            capture_id=raw_capture_id, validation_outcome=validation_outcome, routed_to_parser=False
+        )
+
+    parsed = parse_spec_group_manifest(
+        raw_content.decode("utf-8"),
+        spec_key=spec_key,
+        source_capture_id=raw_capture_id,
+        expected_category_slug=category_slug,
+    )
+    if parsed.critical_error is not None:
+        upsert_category_visit(
+            conn,
+            run_id=run_id,
+            spec_key=spec_key,
+            category_slug=category_slug,
+            event=CheckpointEvent.REJECT,
+            evidence={"critical_error": parsed.critical_error.message},
+        )
+        return ProcessCaptureResult(
+            capture_id=raw_capture_id,
+            validation_outcome=validation_outcome,
+            routed_to_parser=True,
+            critical_error=True,
+        )
+
+    # No structural-drift re-check needed here: parse_spec_group_manifest()
+    # with expected_category_slug already rejects (critical_error) any card
+    # whose href-derived category_slug diverges from the one requested —
+    # the real category page never renders its own nav (bug fix,
+    # 2026-09-10), so that's the only reliable signal left.
+    assert parsed.manifest is not None  # no critical_error => manifest always present
+    found = next((c for c in parsed.manifest.categories if c.category_slug == category_slug), None)
+    groups = found.groups if found is not None else ()
+    upsert_category_visit(
+        conn,
+        run_id=run_id,
+        spec_key=spec_key,
+        category_slug=category_slug,
+        event=CheckpointEvent.ACCEPT,
+        raw_capture_id=raw_capture_id,
+        evidence={"groups": [{"group_id": g.group_id, "source_url": g.source_url} for g in groups]},
     )
     return ProcessCaptureResult(
         capture_id=raw_capture_id, validation_outcome=validation_outcome, routed_to_parser=True

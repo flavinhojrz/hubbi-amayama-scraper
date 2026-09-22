@@ -14,14 +14,20 @@ são ambas tratadas como `critical_error` do manifesto inteiro quando
 violadas — nunca é escolhido um valor arbitrariamente entre os dois lados
 de uma divergência (research.md §21).
 
-`manifest_complete` — limitação de observabilidade registrada em
-research.md §21: não existe, na evidência estática atual, nenhum sinal que
-distinga "manifesto legitimamente menor" de "manifesto truncado mas
-estruturalmente perfeito" (ex.: lazy-load de infinite scroll incompleto).
-O único sinal realmente observável e usado aqui é o caso degenerado
-"container de groups presente, mas vazio, apesar de a navegação declarar
-categorias" — tratado como `manifest_complete=False`. Nenhuma contagem/
-cardinalidade é usada como heurística.
+`manifest_complete` — CORREÇÃO (bug de manifest truncado, auditoria real:
+57,46% dos manifests Volkswagen BR truncados, ex. Saveiro com 4/10
+categorias e 5/75 grupos salvos como "completo"): esta função parseia UMA
+página (a base da spec OU a página dedicada de UMA categoria) e NUNCA pode,
+sozinha, provar que o universo de grupos está completo — a página base
+frequentemente mostra cards de apenas um subconjunto das categorias
+declaradas em `.epcVariation__schemaGroups`. Por isso `manifest_complete` é
+sempre `False` aqui, incondicionalmente; só `orchestration.collection_driver.
+discover_spec_manifest()` pode marcar `True`, e apenas depois de visitar e
+parsear com sucesso TODAS as categorias declaradas (uma por uma, cada
+uma via esta mesma função aplicada à página da categoria). `validation_
+evidence["declared_category_urls"]` carrega o mapa `{category_slug: url}`
+extraído da navegação desta página — é o que permite ao orquestrador saber
+quais categorias ainda precisa visitar.
 
 parser_version = "amayama-spec-group-manifest-parser-v1" (Constitution §13).
 """
@@ -45,8 +51,14 @@ def _category_slug_from_href(href: str) -> str:
     return href.rstrip("/").rsplit("/", 1)[-1]
 
 
-def _declared_category_slugs(nav: Tag) -> set[str]:
-    slugs: set[str] = set()
+def _declared_categories(nav: Tag) -> dict[str, str]:
+    """slug -> URL for every declared domain category (never the "All" link).
+
+    The URL is what lets the orchestrator visit each declared category on
+    its own page (root-cause fix) — dropped by the old `_declared_category_slugs()`,
+    which only needed the slug for the (insufficient) same-page completeness check.
+    """
+    categories: dict[str, str] = {}
     for link in nav.select(selectors.SPEC_NAV_CATEGORY_LINK):
         data_id = link.get("data-id")
         if not data_id:
@@ -54,13 +66,22 @@ def _declared_category_slugs(nav: Tag) -> set[str]:
         href = link.get("href")
         if not href:
             continue
-        slugs.add(_category_slug_from_href(str(href)))
-    return slugs
+        categories[_category_slug_from_href(str(href))] = str(href)
+    return categories
 
 
 def parse_spec_group_manifest(
-    html: str, spec_key: str, source_capture_id: str
+    html: str, spec_key: str, source_capture_id: str, *, expected_category_slug: str | None = None
 ) -> ParseManifestResult:
+    """`expected_category_slug` (bug fix, evidência real 2026-09-10): quando a
+    página parseada é a de UMA categoria específica (não a base da spec), o
+    site NUNCA renderiza `.epcVariation__schemaGroups` nela — só a página
+    base ("all schemas") tem essa nav; exigi-la incondicionalmente fazia
+    TODA visita de categoria ser rejeitada em produção (0 grupos aceitos
+    apesar de a página conter `.epcVariation__schemas` real e válido).
+    Quando fornecido, a nav deixa de ser obrigatória: os cards da página são
+    validados contra o slug já conhecido pelo chamador (a própria URL
+    visitada), em vez de depender da nav ausente."""
     soup = BeautifulSoup(html, "lxml")
 
     if soup.select_one(selectors.SPEC_NAV_DETAILS) is None:
@@ -72,14 +93,19 @@ def parse_spec_group_manifest(
         )
 
     nav = soup.select_one(selectors.SPEC_NAV_CATEGORY_NAV)
-    if nav is None:
+    if nav is not None:
+        declared_category_urls = _declared_categories(nav)
+        declared_slugs = set(declared_category_urls)
+    elif expected_category_slug is not None:
+        declared_category_urls = {}
+        declared_slugs = {expected_category_slug}
+    else:
         return ParseManifestResult(
             critical_error=ParseError(
                 message=f"missing expected category nav {selectors.SPEC_NAV_CATEGORY_NAV!r}"
             ),
             parser_version=PARSER_VERSION,
         )
-    declared_slugs = _declared_category_slugs(nav)
 
     groups_container = soup.select_one(selectors.SPEC_NAV_GROUPS_CONTAINER)
     if groups_container is None:
@@ -148,17 +174,21 @@ def parse_spec_group_manifest(
         )
 
     group_count = sum(len(cat.groups) for cat in categories)
-    manifest_complete = not (declared_slugs and group_count == 0)
 
     manifest = SpecGroupManifest(
         spec_key=spec_key,
         source_capture_id=source_capture_id,
         discovered_at=datetime.now(UTC),
         categories=categories,
-        manifest_complete=manifest_complete,
+        # A single page (base or one category's own) never proves the full
+        # universe is covered — see module docstring. Only the multi-page
+        # assembler (orchestration/collection_driver.py::discover_spec_manifest())
+        # may set this True.
+        manifest_complete=False,
         validation_evidence={
             "category_count": len(declared_slugs),
             "group_count": group_count,
+            "declared_category_urls": declared_category_urls,
         },
     )
 

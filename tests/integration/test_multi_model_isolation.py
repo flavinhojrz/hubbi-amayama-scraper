@@ -146,6 +146,9 @@ def _populate_market_fully(
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(market_index_html, url))
     transport.queue_navigate(_capture(MANIFEST_HTML, spec_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_collection_driver(
@@ -186,6 +189,9 @@ def _populate_amarok_fully(conn, blob_store, capture_repo, tmp_path: Path) -> No
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(AMAROK_MARKET_INDEX_HTML, amarok_url))
     transport.queue_navigate(_capture(MANIFEST_HTML, spec_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_collection_driver(
@@ -427,9 +433,7 @@ def test_scenario_c_same_vehicle_model_different_market_isolated(tmp_path: Path)
 
 def test_scenario_d_resume_across_models_is_rejected(tmp_path: Path) -> None:
     conn = _conn(tmp_path)
-    save_collection_run(
-        conn, CollectionRun(run_id="run-amarok-old", scope=AMAROK_CONTEXT.scope())
-    )
+    save_collection_run(conn, CollectionRun(run_id="run-amarok-old", scope=AMAROK_CONTEXT.scope()))
 
     with pytest.raises(IncompatibleResumeRunError):
         select_run(
@@ -491,9 +495,7 @@ def test_scenario_f_market_index_response_for_a_different_market_aborts_the_run(
     other_market_context = CollectionContext(
         manufacturer="VOLKSWAGEN", vehicle_model="AMAROK", market="AMA-US"
     )
-    save_collection_run(
-        conn, CollectionRun(run_id="run-1", scope=other_market_context.scope())
-    )
+    save_collection_run(conn, CollectionRun(run_id="run-1", scope=other_market_context.scope()))
 
     url = build_market_index_url(other_market_context)
     transport = FakeBrowserTransport()

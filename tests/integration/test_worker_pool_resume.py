@@ -116,6 +116,11 @@ def test_resume_via_worker_pool_never_renavigates_accepted_units(tmp_path: Path)
     first_pass_transport = FakeBrowserTransport()
     first_pass_transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     first_pass_transport.queue_navigate(_capture(MANIFEST_HTML_TWO_GROUPS, _SPEC_URL))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    first_pass_transport.queue_navigate(
+        _capture(MANIFEST_HTML_TWO_GROUPS, "https://x/front-axle-steering")
+    )
     first_pass_transport.queue_navigate(
         _capture(_group_html("1K0407151"), "https://x/front-axle-steering/407")
     )
@@ -189,6 +194,11 @@ def test_resume_via_worker_pool_never_claims_an_already_valid_spec(tmp_path: Pat
     full_transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     for _ in range(2):
         full_transport.queue_navigate(_capture(MANIFEST_HTML_TWO_GROUPS, _SPEC_URL))
+        # Bug fix (manifest truncado): the single declared category is
+        # visited on its own URL before the manifest can become complete.
+        full_transport.queue_navigate(
+            _capture(MANIFEST_HTML_TWO_GROUPS, "https://x/front-axle-steering")
+        )
         full_transport.queue_navigate(
             _capture(_group_html("1K0407151"), "https://x/front-axle-steering/407")
         )

@@ -169,6 +169,9 @@ def test_group_detail_challenge_timeout_skips_only_that_group(tmp_path):
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(CHALLENGE_HTML, "https://x/front-axle-steering/407"))
     for _ in range(50):
         transport.queue_current_capture(

@@ -85,6 +85,9 @@ def test_valid_spec_is_skipped_entirely_on_a_later_invocation(tmp_path):
     t1 = FakeBrowserTransport()
     t1.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    t1.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     t1.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
     run_collection_driver(
         t1,
@@ -146,6 +149,12 @@ def test_accepted_group_is_not_renavigated_in_a_later_pass_of_the_same_spec(tmp_
     t1 = FakeBrowserTransport()
     t1.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
     t1.queue_navigate(_capture(two_group_manifest, _SPEC_URL))
+    # Bug fix (manifest truncado): both declared categories are each visited
+    # on their own URL (sorted: engine, front-axle-steering) before the
+    # manifest can become complete — independent of limit_groups, which only
+    # truncates the GROUP_DETAIL pending list afterwards.
+    t1.queue_navigate(_capture(two_group_manifest, "https://x/engine"))
+    t1.queue_navigate(_capture(two_group_manifest, "https://x/front-axle-steering"))
     t1.queue_navigate(_capture(GROUP_HTML, "https://x/engine/100"))
     run_collection_driver(
         t1,

@@ -75,8 +75,19 @@ def _run(
 
     fake = FakeBrowserTransport()
     fake.queue_navigate(_capture(MARKET_INDEX_HTML, MARKET_INDEX_URL))
-    fake.queue_navigate(_capture(MANIFEST_HTML, _SPEC_URL))
-    fake.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
+    # The SPEC_NAVIGATION base page is now fetched by the pre-pass
+    # run_spec_navigation_batch_phase() via navigate_many() (batch fetch),
+    # not by a sequential navigate() inside discover_spec_manifest().
+    fake.queue_navigate_many({_SPEC_URL: _capture(MANIFEST_HTML, _SPEC_URL)})
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete — via
+    # navigate_many() (batch fetch, ligado por padrão na CLI, mesma técnica
+    # usada por GROUP_DETAIL para evitar o CAPTCHA/challenge que navigate()
+    # sequencial dispara quase sempre, spikes/batched_fetch_spike.py).
+    category_url = "https://x/front-axle-steering"
+    fake.queue_navigate_many({category_url: _capture(MANIFEST_HTML, category_url)})
+    group_url = "https://x/front-axle-steering/407"
+    fake.queue_navigate_many({group_url: _capture(GROUP_HTML, group_url)})
     monkeypatch.setattr("amayama_scraper.cli.main.ChromeCdpTransport", lambda **_kw: fake)
 
     exit_code = main(

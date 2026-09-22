@@ -18,7 +18,7 @@ def test_all_documented_selectors_present():
         "schemas_container": ".epcSchema__schemas",
         "schema": ".epcSchema__schema[data-id]",
         "image_description": ".img__description",
-        "image": ".imgMap img[src]",
+        "image": "img.imgMap[src], .imgMap img[src]",
         "entries_table": ".entriesTable",
         "pnc_row": "tr[data-key]",
         "group_header": ".entriesPncTable__groupHeader",

@@ -39,7 +39,18 @@ def test_manifests_are_real_complete_and_coherent_with_sample():
         result = load_manifest(spec_slug, spec_key)
 
         assert result.critical_error is None
-        assert result.manifest.manifest_complete is True
+        # Bug fix (manifest truncado): a single-page parse is never
+        # authoritatively complete by itself anymore (parsing/
+        # spec_group_manifest.py) — completeness now requires visiting every
+        # declared category on its own URL (orchestration/collection_driver.py
+        # ::discover_spec_manifest()), out of scope for this sample-level
+        # regression (see module docstring). What real evidence DOES support
+        # here: every category declared in this real page's own nav is
+        # backed by at least one card ON THIS SAME PAGE — this specific real
+        # capture was not itself truncated.
+        assert result.manifest.manifest_complete is False
+        declared = result.manifest.validation_evidence["declared_category_urls"]
+        assert {c.category_slug for c in result.manifest.categories} == set(declared)
         assert sum(len(c.groups) for c in result.manifest.categories) == 108
 
         expected = result.manifest.expected_group_keys()

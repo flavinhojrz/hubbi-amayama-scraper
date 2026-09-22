@@ -13,6 +13,14 @@ dependencies = [
     "beautifulsoup4>=4.12,<5",
     "lxml>=5.0,<6",
     "selenium>=4.15,<5",
+    "undetected-chromedriver>=3.5,<4",
+    "requests>=2.31,<3",
+    # undetected-chromedriver 3.5.x ainda importa `distutils` (removido da
+    # stdlib no Python 3.12+) — setuptools>=60 reinstala um `distutils` via
+    # shim assim que é importado primeiro (ver import em
+    # transport/undetected_chrome_adapter.py). Sem relação com nada de
+    # build/empacotamento deste projeto.
+    "setuptools>=60",
 ]
 
 [project.optional-dependencies]

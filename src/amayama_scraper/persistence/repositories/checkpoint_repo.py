@@ -63,6 +63,45 @@ def list_incomplete_runs(conn: sqlite3.Connection, scope: str) -> list[Collectio
     ]
 
 
+def get_latest_run_for_scope(conn: sqlite3.Connection, scope: str) -> CollectionRun | None:
+    """Repair/backfill (bug de manifest truncado): a `CollectionRun` mais
+    recente (por `started_at`) para `scope`, IGNORANDO `completed_at` — ao
+    contrário de `list_incomplete_runs()`, propositalmente inclui runs já
+    completos, para que `--repair-manifest` possa reabri-los (limpar
+    `completed_at`, ver cli/main.py) e reusar o MESMO `run_id`, preservando
+    checkpoints/visitas de categoria já `ACCEPTED` nele.
+
+    Quando um scope tem mais de uma `CollectionRun` histórica (uso deliberado
+    de `--new-run`), apenas a mais recente é reaberta — limitação conhecida
+    documentada em cli/main.py."""
+    row = conn.execute(
+        "SELECT * FROM collection_run WHERE scope = ? ORDER BY started_at DESC LIMIT 1",
+        (scope,),
+    ).fetchone()
+    if row is None:
+        return None
+    return CollectionRun(
+        run_id=row["run_id"],
+        scope=row["scope"],
+        started_at=datetime.fromisoformat(row["started_at"]) if row["started_at"] else None,
+        resumed_at=datetime.fromisoformat(row["resumed_at"]) if row["resumed_at"] else None,
+        completed_at=datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None,
+    )
+
+
+def list_distinct_scopes_for_manufacturer(conn: sqlite3.Connection, manufacturer: str) -> list[str]:
+    """Repair/backfill: todo `CollectionRun.scope` distinto já persistido
+    cujo componente `manufacturer` combina (ex.: "VOLKSWAGEN") — usado por
+    `--repair-manifest --repair-all-scopes` para reparar todo scope já
+    coletado desse fabricante sem exigir que o operador liste manualmente
+    cada combinação vehicle_model/market (`cli/main.py`)."""
+    rows = conn.execute(
+        "SELECT DISTINCT scope FROM collection_run WHERE scope LIKE ? ORDER BY scope",
+        (f"AMAYAMA:{manufacturer}:%",),
+    ).fetchall()
+    return [row["scope"] for row in rows]
+
+
 def get_collection_run(conn: sqlite3.Connection, run_id: str) -> CollectionRun | None:
     row = conn.execute("SELECT * FROM collection_run WHERE run_id = ?", (run_id,)).fetchone()
     if row is None:

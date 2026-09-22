@@ -177,6 +177,11 @@ def test_challenge_timeout_defers_within_session_but_resume_can_retry(tmp_path: 
     session_2 = "pool-session-2"
     resume_transport = FakeBrowserTransport()
     resume_transport.queue_navigate(_capture(MANIFEST_HTML_ONE_GROUP, spec.source_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    resume_transport.queue_navigate(
+        _capture(MANIFEST_HTML_ONE_GROUP, "https://x/front-axle-steering")
+    )
     resume_transport.queue_navigate(_capture(VALID_GROUP_HTML, "https://x/front-axle-steering/407"))
     run_worker_loop(
         resume_transport,
@@ -213,6 +218,9 @@ def test_manual_retry_required_blocks_normal_reclaim_until_retry_rejected(tmp_pa
     # retry_classification.py, nunca alterada aqui).
     transport_a = FakeBrowserTransport()
     transport_a.queue_navigate(_capture(MANIFEST_HTML_ONE_GROUP, spec.source_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport_a.queue_navigate(_capture(MANIFEST_HTML_ONE_GROUP, "https://x/front-axle-steering"))
     transport_a.queue_navigate(_capture(INVALID_GROUP_HTML, "https://x/front-axle-steering/407"))
     run_worker_loop(
         transport_a,

@@ -1,0 +1,56 @@
+Amarok | AMA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/amarok/ama-br
+Bora | BO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/bora/bo-br
+Bora/Variant/4Motion | BO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/bora-variant-4motion/bo-br
+CC | CC-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/cc/cc-br
+Eos | EOS-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/eos/eos-br
+Fox | FO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/fox/fo-br
+Fox-EU | FO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/fox-eu/fo-br
+Gol | GL-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/gol/gl-br
+Gol Special 2P | GLS-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/gol-special-2p/gls-br
+Golf | GO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/golf/go-br
+Golf | GOB-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/golf/gob-br
+Golf | GOM-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/golf/gom-br
+Golf Variant | GO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/golf-variant/go-br
+Golf Variant | GOV-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/golf-variant/gov-br
+Golf/R32/GTI/Rabbit | GO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/golf-r32-gti-rabbit/go-br
+ID. Buzz | IDB-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/id-buzz/idb-br
+ID.4 | ID4-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/id4/id4-br
+ID.4/ID.5 | ID4-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/id4-id5/id4-br
+Jetta | JE-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/jetta/je-br
+Jetta | JEB-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/jetta/jeb-br
+Jetta A7 PA2 | JE-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/jetta-a7-pa2/je-br
+Jetta Variant | JEV-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/jetta-variant/jev-br
+New Beetle | NBE-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/new-beetle/nbe-br
+Nivus | NIV-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/nivus/niv-br
+Novo Fusca | NFU-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/novo-fusca/nfu-br
+Parati | PR-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/parati/pr-br
+Parati 4P | PR-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/parati-4p/pr-br
+Passat | PA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/passat/pa-br
+Passat CC | PACC-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/passat-cc/pacc-br
+Passat CC (Coupe) | PACC-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/passat-cc-coupe/pacc-br
+Passat/4Motion | PA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/passat-4motion/pa-br
+Passat/Variant | PA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/passat-variant/pa-br
+Passat/Variant/Santana | PA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/passat-variant-santana/pa-br
+Polo | PO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo/po-br
+Polo Lim.(Stufenh./Sedan) | POS-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo-lim-stufenh-sedan/pos-br
+Polo Sedan | POS-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo-sedan/pos-br
+Polo Track | POT-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo-track/pot-br
+Polo/Derby/Vento-IND | PO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo-derby-vento-ind/po-br
+Polo/Polo Jin Qin | PO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo-polo-jin-qin/po-br
+Polo/Vento/Classic-IND | PO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/polo-vento-classic-ind/po-br
+Santana/Variant | SA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/santana-variant/sa-br
+Saveiro | SA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/saveiro/sa-br
+Spacefox | SPRA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/spacefox/spra-br
+Sportvan | SPRA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/sportvan/spra-br
+T-Cross | TCR-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/tcross/tcr-br
+Taos | TAO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/taos/tao-br
+Tiguan | TIG-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/tiguan/tig-br
+Tiguan Allspace | TIGL-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/tiguan-allspace/tigl-br
+Tiguan/Tiguan L | TIG-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/tiguan-tiguan-l/tig-br
+Touareg | TOUA-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/touareg/toua-br
+Transporter | TR-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/transporter/tr-br
+Transporter Kombi | TR-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/transporter-kombi/tr-br
+up! | UP-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/up/up-br
+up! / e-up! | UP-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/up-eup/up-br
+Virtus | VIR-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/virtus/vir-br
+Voyage | VO-BR | https://www.amayama.com/en/genuine-catalogs/epc/volkswagen-overall/voyage/vo-br

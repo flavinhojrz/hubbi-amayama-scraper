@@ -94,10 +94,12 @@ def test_both_discovered_specs_reach_valid_via_one_driver_invocation(tmp_path):
     # not catalog_id — queue both specs' captures; whichever is processed
     # first consumes the first queued manifest/group pair.
     transport.queue_navigate(_capture(MANIFEST_HTML, _URL_62184))
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(
         _capture(_group_html("1K0407151"), "https://x/front-axle-steering/407")
     )
     transport.queue_navigate(_capture(MANIFEST_HTML, _URL_61189))
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(
         _capture(_group_html("1K0407152"), "https://x/front-axle-steering/407")
     )

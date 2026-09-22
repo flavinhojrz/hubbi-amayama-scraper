@@ -5,9 +5,15 @@ clarification) — see test_2hbc3x_s1bc3x.py module docstring for the full
 rationale on why this never claims WHOLE-SPEC EXACT and never routes
 around `process_capture()`/`classify_capture()`.
 
-`body/800` sustains real, complete image complementarity: `s7bc8a-62184`
-has no own image on any of its 6 real schemas, `agdc8a-62169` has an own
-image on all 6 — while the parts content is otherwise SAMPLE-LEVEL EXACT.
+Bug fix (2026-09-10): `parsing/selectors.py::IMAGE` (`.imgMap img[src]`)
+never matched real fetch()-captured group pages — the real `<img>` itself
+carries class `imgMap`, with no wrapping element of the same class (that
+wrapper only appears in a full-navigate()+JS capture). `body/800` was
+previously (mis)reported as "complementary coverage" (one side with zero
+images, the other fully covered) purely because of that selector bug —
+corrected here against the real fixtures: both `s7bc8a-62184` and
+`agdc8a-62169` genuinely carry the same, identical image on all 6
+schemas. Parts content stays SAMPLE-LEVEL EXACT, unaffected either way.
 """
 
 from __future__ import annotations
@@ -29,7 +35,18 @@ def test_manifests_are_real_complete_and_coherent_with_sample():
         result = load_manifest(spec_slug, spec_key)
 
         assert result.critical_error is None
-        assert result.manifest.manifest_complete is True
+        # Bug fix (manifest truncado): a single-page parse is never
+        # authoritatively complete by itself anymore (parsing/
+        # spec_group_manifest.py) — completeness now requires visiting every
+        # declared category on its own URL (orchestration/collection_driver.py
+        # ::discover_spec_manifest()), out of scope for this sample-level
+        # regression (see module docstring). What real evidence DOES support
+        # here: every category declared in this real page's own nav is
+        # backed by at least one card ON THIS SAME PAGE — this specific real
+        # capture was not itself truncated.
+        assert result.manifest.manifest_complete is False
+        declared = result.manifest.validation_evidence["declared_category_urls"]
+        assert {c.category_slug for c in result.manifest.categories} == set(declared)
         assert sum(len(c.groups) for c in result.manifest.categories) == 99
 
         expected = result.manifest.expected_group_keys()
@@ -58,7 +75,7 @@ def test_sample_level_exact_parts_across_engine_front_axle_body():
         assert category_fingerprint(cat_a) == category_fingerprint(cat_b)
 
 
-def test_body_800_shows_real_complementary_image_coverage_without_affecting_parts_equality():
+def test_body_800_shows_real_identical_image_coverage_without_affecting_parts_equality():
     a = load_group_detail("s7bc8a-62184", "body", "800")
     b = load_group_detail("agdc8a-62169", "body", "800")
 
@@ -72,22 +89,22 @@ def test_body_800_shows_real_complementary_image_coverage_without_affecting_part
     cat_a = group_detail_to_category("body", "800", a)
     cat_b = group_detail_to_category("body", "800", b)
 
-    # Parts stay SAMPLE-LEVEL EXACT despite the image difference (Constitution
-    # §8/§10: images never participate in parts equivalence).
+    # Parts stay SAMPLE-LEVEL EXACT regardless of the image evidence
+    # (Constitution §8/§10: images never participate in parts equivalence).
     assert category_fingerprint(cat_a) == category_fingerprint(cat_b)
 
-    # Real evidence: s7bc8a-62184 has zero own images on this group;
-    # agdc8a-62169 has an own image on every one of its 6 schemas — a clean
-    # complementary-coverage case (one side fully covered, the other not
-    # covered at all), using the real, independent image fingerprint channel
-    # (fingerprints/image.py) that finalize_spec_entry() itself uses for
+    # Corrected real evidence (see module docstring): both sides carry an
+    # own image on every one of their 6 schemas, and the same one — using
+    # the real, independent image fingerprint channel (fingerprints/
+    # image.py) that finalize_spec_entry() itself uses for
     # SpecSnapshot.image_hash — evaluated here at sample scope, without
     # fabricating a SpecSnapshot.
     a_has_own_images = image_hash((cat_a,)) != EMPTY_IMAGE_HASH
     b_has_own_images = image_hash((cat_b,)) != EMPTY_IMAGE_HASH
-    assert a_has_own_images is False
+    assert a_has_own_images is True
     assert b_has_own_images is True
+    assert image_hash((cat_a,)) == image_hash((cat_b,))
     for schema in a.schemas:
-        assert all(p.image_url is None for p in schema.parts)
+        assert all(p.image_url for p in schema.parts)
     for schema in b.schemas:
         assert all(p.image_url for p in schema.parts)

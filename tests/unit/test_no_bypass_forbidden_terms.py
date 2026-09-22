@@ -3,7 +3,14 @@
 T129 (002) — a mesma auditoria é estendida a transport/, cli/ e aos novos
 arquivos de orchestration/ desta feature (a superfície onde bypass/stealth/
 evasão faria sentido tentar, se alguém tentasse — spec.md "Segurança
-arquitetural"). validation/ permanece coberto pelo teste original."""
+arquitetural"). validation/ permanece coberto pelo teste original.
+
+2026-09-10 — decisão explícita do usuário: `transport/undetected_chrome_
+adapter.py` e `transport/captcha_client.py` são a exceção deliberada e
+sancionada a essa auditoria (resolvem CAPTCHA de propósito, via serviço
+externo — ver docstring dos dois módulos) — excluídos da varredura abaixo,
+única e exclusivamente esses dois arquivos. O resto de transport/cli/
+orchestration continua 100% coberto."""
 
 import re
 from pathlib import Path
@@ -17,6 +24,16 @@ NEW_FEATURE_AUDIT_ROOTS = (
     SRC_ROOT / "transport",
     SRC_ROOT / "cli",
     SRC_ROOT / "orchestration",
+)
+
+#: Exceção deliberada e sancionada (decisão do usuário, 2026-09-10) — os
+#: únicos dois arquivos de todo o src/ que têm PROPÓSITO de citar esses
+#: termos (resolvem CAPTCHA de verdade). Nada além disso é excluído.
+SANCTIONED_CAPTCHA_SOLVER_FILES = frozenset(
+    {
+        SRC_ROOT / "transport" / "undetected_chrome_adapter.py",
+        SRC_ROOT / "transport" / "captcha_client.py",
+    }
 )
 
 # Word-boundary matched — deliberately excludes "solver" as a bare English word
@@ -49,5 +66,10 @@ def test_no_forbidden_bypass_terms_in_validation_source() -> None:
 
 
 def test_no_forbidden_bypass_terms_in_002_transport_cli_orchestration_source() -> None:
-    files = [p for root in NEW_FEATURE_AUDIT_ROOTS for p in sorted(root.rglob("*.py"))]
+    files = [
+        p
+        for root in NEW_FEATURE_AUDIT_ROOTS
+        for p in sorted(root.rglob("*.py"))
+        if p not in SANCTIONED_CAPTCHA_SOLVER_FILES
+    ]
     _assert_no_forbidden_terms(files)

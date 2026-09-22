@@ -10,6 +10,14 @@ class CaptureKind(StrEnum):
 
     MARKET_INDEX = "MARKET_INDEX"
     SPEC_NAVIGATION = "SPEC_NAVIGATION"
+    #: Página de UMA categoria declarada na navegação da spec (o mesmo
+    #: `.epcVariation__schemaGroups`/`.epcVariation__schemas` de SPEC_NAVIGATION,
+    #: mas navegada para a URL própria da categoria — nunca a página base).
+    #: Existe porque a página base pode mostrar cards de apenas um subconjunto
+    #: das categorias declaradas (causa raiz do bug de manifest truncado) —
+    #: cada categoria declarada precisa ser visitada individualmente para que
+    #: seu universo real de grupos seja conhecido.
+    SPEC_CATEGORY_DETAIL = "SPEC_CATEGORY_DETAIL"
     GROUP_DETAIL = "GROUP_DETAIL"
 
 

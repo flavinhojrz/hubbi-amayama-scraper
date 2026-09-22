@@ -117,6 +117,9 @@ def test_run_completes_normally_and_stops_appearing_in_incomplete_runs(tmp_path)
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(SINGLE_SPEC_MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, spec_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
 
     run_collection_driver(
@@ -145,6 +148,9 @@ def test_subsequent_invocation_without_flags_creates_a_new_run_after_completion(
     transport = FakeBrowserTransport()
     transport.queue_navigate(_capture(SINGLE_SPEC_MARKET_INDEX_HTML, MARKET_INDEX_URL))
     transport.queue_navigate(_capture(MANIFEST_HTML, spec_url))
+    # Bug fix (manifest truncado): the single declared category is visited
+    # on its own URL before the manifest can become complete.
+    transport.queue_navigate(_capture(MANIFEST_HTML, "https://x/front-axle-steering"))
     transport.queue_navigate(_capture(GROUP_HTML, "https://x/front-axle-steering/407"))
     run_collection_driver(
         transport,
