@@ -8,7 +8,7 @@
 - Collection database: `audi_mass.db`
 - Database size: `369020928` bytes
 - Database SHA256: `d97c651b73ff85be5a98bd6ef5324f98b62ab5ed0b18c200ab0d84aa7eff00fc`
-- Drive database artifact: `audi_mass_db.zip` (71,515,341 bytes), SHA256 `ae25743f062b27ccd2837ffd6be6cf5c12ebc8252e0d57ad43a0309d8f6df101`
+- Drive database artifact: `audi_mass_db.zip` (71,515,355 bytes), SHA256 `174d7552c6d6717e276721176b6eb9d76f8d7ef99f6ff6004bb5a6507f6c44f1`
 - Raw artifact: `audi_mass_raw.zip`, split into `audi_mass_raw.zip.part-001` through `part-020` because Drive's per-file limit is 100 MB
 - Raw ZIP size: `1,726,950,221` bytes; SHA256 `0365597f3d565212ff747775bbbe3d6250d1368552ae755e95c22158fe171a1e`
 
