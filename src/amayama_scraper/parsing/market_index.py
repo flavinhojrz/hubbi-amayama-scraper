@@ -17,6 +17,7 @@ parser_version = "amayama-market-index-parser-v1" (Constitution §13).
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import date
 
@@ -31,6 +32,7 @@ PARSER_VERSION = "amayama-market-index-parser-v1"
 
 _CATALOG_ID_SUFFIX = re.compile(r"-(\d+)$")
 _PERIOD_MONTH = re.compile(r"^(\d{4})\.(\d{2})$")
+_UNKNOWN_PRODUCTION_PERIOD = "UNKNOWN"
 
 
 def _text_or_none(tag: Tag | None) -> str | None:
@@ -124,6 +126,75 @@ def _parse_row(
     return entry, None
 
 
+def _parse_json_ld_item_list(
+    soup: BeautifulSoup, market: str, source_capture_id: str
+) -> tuple[list[DiscoveredSpecEntry], list[ParseError]]:
+    """Lê a lista canônica de specs publicada no JSON-LD do índice.
+
+    Alguns índices exibem só uma janela curta de ``.epcVariations__row`` no
+    HTML, mas incluem todas as specs no ``ItemList`` de schema.org. Este é um
+    segundo formato de representação da mesma página, não uma regra de marca;
+    períodos e grades ficam ausentes quando não existem nesse bloco.
+    """
+    entries: list[DiscoveredSpecEntry] = []
+    errors: list[ParseError] = []
+    for tag in soup.select('script[type="application/ld+json"]'):
+        raw = tag.string or tag.get_text()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        candidates = data if isinstance(data, list) else [data]
+        for candidate in candidates:
+            if not isinstance(candidate, dict) or candidate.get("@type") != "ItemList":
+                continue
+            items = candidate.get("itemListElement")
+            if not isinstance(items, list):
+                errors.append(ParseError(message="JSON-LD ItemList has no list itemListElement"))
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    errors.append(ParseError(message="JSON-LD ItemList entry is not an object"))
+                    continue
+                model_code = item.get("name")
+                source_url = item.get("url")
+                if not isinstance(model_code, str) or not model_code.strip():
+                    errors.append(ParseError(message="JSON-LD ItemList entry has no model_code"))
+                    continue
+                if not isinstance(source_url, str) or not source_url.strip():
+                    errors.append(
+                        ParseError(
+                            message="JSON-LD ItemList entry has no source_url",
+                            context={"model_code": model_code},
+                        )
+                    )
+                    continue
+                catalog_id = _extract_catalog_id(source_url)
+                if catalog_id is None:
+                    errors.append(
+                        ParseError(
+                            message="could not extract numeric amayama_catalog_id from JSON-LD URL",
+                            context={"source_url": source_url},
+                        )
+                    )
+                    continue
+                entries.append(
+                    DiscoveredSpecEntry(
+                        market=market,
+                        model_code=model_code,
+                        amayama_catalog_id=catalog_id,
+                        source_url=source_url,
+                        source_capture_id=source_capture_id,
+                        # JSON-LD exposes identity/url but not period. Keep
+                        # that absence explicit while preserving unknown date
+                        # bounds as None; SpecIdentity forbids an empty raw
+                        # period field.
+                        production_period_raw=_UNKNOWN_PRODUCTION_PERIOD,
+                    )
+                )
+    return entries, errors
+
+
 def parse_market_spec_index(html: str, source_capture_id: str) -> ParseMarketIndexResult:
     soup = BeautifulSoup(html, "lxml")
 
@@ -144,17 +215,19 @@ def parse_market_spec_index(html: str, source_capture_id: str) -> ParseMarketInd
             parser_version=PARSER_VERSION,
         )
 
-    entries: list[DiscoveredSpecEntry] = []
-    parse_errors: list[ParseError] = []
+    json_ld_entries, parse_errors = _parse_json_ld_item_list(soup, market, source_capture_id)
+    entries_by_catalog_id = {entry.amayama_catalog_id: entry for entry in json_ld_entries}
     for row in soup.select(selectors.MARKET_INDEX_ROW):
         entry, error = _parse_row(row, market, source_capture_id)
         if error is not None:
             parse_errors.append(error)
         if entry is not None:
-            entries.append(entry)
+            # A linha HTML, quando presente, contém grade/período mais ricos
+            # que o JSON-LD e portanto substitui a mesma spec canônica.
+            entries_by_catalog_id[entry.amayama_catalog_id] = entry
 
     return ParseMarketIndexResult(
-        entries=tuple(entries),
+        entries=tuple(entries_by_catalog_id.values()),
         parse_errors=tuple(parse_errors),
         critical_error=None,
         parser_version=PARSER_VERSION,

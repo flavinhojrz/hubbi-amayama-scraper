@@ -41,6 +41,22 @@ def test_ordinary_page_not_detected_as_challenge():
     assert result.detected is False
 
 
+def test_amayama_captcha_redirect_is_detected_even_when_its_html_has_no_marker():
+    result = detect_challenge(
+        "<html><head><title>Captcha</title></head><body></body></html>",
+        source_url="https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs",
+    )
+    assert result.detected is True
+    assert result.evidence["source_url_markers"] == ["/captcha.html"]
+
+    classification = classify_capture(
+        b"<html><head><title>Captcha</title></head><body></body></html>",
+        CaptureKind.MARKET_INDEX,
+        source_url="https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs",
+    )
+    assert classification.primary_outcome is ValidationOutcome.CHALLENGE
+
+
 def test_real_complete_manifest_g_recaptcha_in_benign_modal_is_not_challenge():
     """Caso 1 (Issue #8) — real, complete SPEC_NAVIGATION page."""
     html = (REGRESSION_FIXTURES / "2hbc3x" / "manifest.html").read_text(encoding="utf-8")

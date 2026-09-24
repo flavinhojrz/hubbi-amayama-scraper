@@ -144,7 +144,11 @@ def process_capture(
     _require_matching_spec_context(conn, spec_key, context)
 
     raw_capture = accept_capture(capture_input, blob_store, capture_repo)
-    validation = classify_capture(capture_input.raw_content, capture_input.capture_kind)
+    validation = classify_capture(
+        capture_input.raw_content,
+        capture_input.capture_kind,
+        source_url=capture_input.source_url,
+    )
     accepted = validation.primary_outcome is ValidationOutcome.ACCEPTED
 
     if capture_input.capture_kind is CaptureKind.GROUP_DETAIL:

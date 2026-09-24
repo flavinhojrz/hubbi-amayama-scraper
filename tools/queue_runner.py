@@ -46,7 +46,7 @@ DEFAULT_LIST_PATH = PROJECT_ROOT / "vw_br_markets.txt"
 DEFAULT_CHROME_PATH = Path("C:/Program Files/Google/Chrome/Application/chrome.exe")
 DEFAULT_PYTHON_EXE = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
 _MIN_LAUNCH_GAP_SECONDS = 15.0  # espaçamento mínimo entre lançar sessões novas
-_SLUG_RE = re.compile(r"/volkswagen-overall/([^/]+)/")
+_SLUG_RE = re.compile(r"/[^/]+-overall/([^/]+)/")
 
 
 @dataclass
@@ -54,6 +54,7 @@ class Target:
     vehicle_model: str
     market: str
     display_name: str
+    run_id: str | None = None
 
     @property
     def key(self) -> tuple[str, str]:
@@ -104,6 +105,9 @@ def load_done_scopes(db_path: str) -> set[tuple[str, str]]:
     mesma leitura WAL-aware de tools/monitor.py, feita uma única vez no
     início (a fila já fica fixa depois de calculada; os alvos que a própria
     automação vai rodar não precisam ser reconsultados)."""
+    if not Path(db_path).exists():
+        return set()
+
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from monitor import _connect_ro  # reusa a mesma leitura segura de WAL
 
@@ -122,6 +126,27 @@ def load_done_scopes(db_path: str) -> set[tuple[str, str]]:
         if len(parts) >= 2:
             done.add((parts[-2], parts[-1]))
     return done
+
+
+def load_incomplete_runs(db_path: str) -> dict[tuple[str, str], str]:
+    if not Path(db_path).exists():
+        return {}
+    conn = sqlite3.connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT run_id, scope FROM collection_run "
+            "WHERE completed_at IS NULL"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+    result: dict[tuple[str, str], str] = {}
+    for run_id, scope in rows:
+        parts = scope.split(":")
+        if len(parts) >= 2:
+            result[(parts[-2], parts[-1])] = run_id
+    return result
 
 
 def _chrome_reachable(port: int) -> bool:
@@ -148,16 +173,23 @@ def ensure_chrome(port: int, profile_dir: Path, chrome_path: Path) -> None:
 
 
 def launch_target(
-    slot: Slot, target: Target, db_path: str, python_exe: str, poll_interval: float
+    slot: Slot,
+    target: Target,
+    db_path: str,
+    python_exe: str,
+    poll_interval: float,
+    manufacturer: str,
+    raw_root: str | None,
+    resume_existing: bool,
 ) -> subprocess.Popen:
     cmd = [
         python_exe,
         "-m",
         "amayama_scraper.cli.main",
         "run",
-        "--new-run",
+        "--resume" if resume_existing and target.run_id else "--new-run",
         "--manufacturer",
-        "VOLKSWAGEN",
+        manufacturer,
         "--vehicle-model",
         target.vehicle_model,
         "--market",
@@ -171,6 +203,11 @@ def launch_target(
         "--challenge-poll-interval",
         str(poll_interval),
     ]
+    if resume_existing and target.run_id:
+        cmd.insert(5, target.run_id)
+        cmd.extend(("--retry-rejected",))
+    if raw_root:
+        cmd.extend(("--raw-root", raw_root))
     return subprocess.Popen(cmd, cwd=PROJECT_ROOT)  # noqa: S603
 
 
@@ -186,11 +223,22 @@ def main() -> int:
     parser.add_argument("--python-exe", default=str(DEFAULT_PYTHON_EXE))
     parser.add_argument("--poll-interval", type=float, default=1.0)
     parser.add_argument("--check-interval", type=float, default=5.0)
+    parser.add_argument("--manufacturer", default="VOLKSWAGEN")
+    parser.add_argument("--raw-root")
+    parser.add_argument(
+        "--resume-existing", action="store_true",
+        help="retoma os collection_run incompletos pelo run_id, sem --new-run",
+    )
     args = parser.parse_args()
 
     all_targets = parse_targets(Path(args.list))
     done = load_done_scopes(args.db_path)
-    queue = [t for t in all_targets if t.key not in done]
+    incomplete = load_incomplete_runs(args.db_path) if args.resume_existing else {}
+    queue = [
+        Target(t.vehicle_model, t.market, t.display_name, incomplete.get(t.key))
+        for t in all_targets
+        if t.key not in done and (not args.resume_existing or t.key in incomplete)
+    ]
 
     print(f"{len(all_targets)} alvos na lista, {len(done)} já completos, {len(queue)} na fila.")
     if not queue:
@@ -226,7 +274,14 @@ def main() -> int:
             f"({target.vehicle_model} {target.market}) na porta {slot.port}"
         )
         slot.process = launch_target(
-            slot, target, args.db_path, args.python_exe, args.poll_interval
+            slot,
+            target,
+            args.db_path,
+            args.python_exe,
+            args.poll_interval,
+            args.manufacturer.upper(),
+            args.raw_root,
+            args.resume_existing,
         )
         slot.target = target
         slot.started_at = time.monotonic()

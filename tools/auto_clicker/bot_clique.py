@@ -2,6 +2,7 @@ import ctypes
 import re
 import sys
 import time
+from pathlib import Path
 
 import pyautogui
 import pyscreeze
@@ -14,6 +15,11 @@ from PIL import ImageGrab
 # image at all. These helpers grab the full virtual screen instead.
 
 _IS_WINDOWS = sys.platform == "win32"
+_SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+class ScreenCaptureUnavailableError(RuntimeError):
+    """A captura só é possível na sessão gráfica interativa do Windows."""
 
 # print() is block-buffered (not line-buffered) whenever stdout is redirected
 # to a file/pipe instead of a real terminal, which is exactly what happens
@@ -51,6 +57,17 @@ def _virtual_screen_origin():
     return user32.GetSystemMetrics(SM_XVIRTUALSCREEN), user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
 
 
+def _capture_all_screens():
+    try:
+        return ImageGrab.grab(all_screens=True)
+    except OSError as exc:
+        raise ScreenCaptureUnavailableError(
+            "Não foi possível capturar a tela. Execute o bot na sessão Windows "
+            "interativa do usuário (não como serviço, tarefa em background ou "
+            "terminal sem desktop visível)."
+        ) from exc
+
+
 def locate_center_all_screens(image_paths, confidence=0.8, region=None):
     """
     Like pyautogui.locateCenterOnScreen, but searches every monitor and
@@ -72,11 +89,11 @@ def locate_center_all_screens(image_paths, confidence=0.8, region=None):
                     near-miss (e.g. 0.79 against a 0.8 threshold) can be
                     told apart from "nothing there at all" (e.g. 0.3).
     """
-    if isinstance(image_paths, (str, bytes)):
+    if isinstance(image_paths, (str, bytes, Path)):
         image_paths = [image_paths]
 
     origin_x, origin_y = _virtual_screen_origin()
-    screenshot = ImageGrab.grab(all_screens=True)
+    screenshot = _capture_all_screens()
 
     search_image = screenshot
     crop_left, crop_top = 0, 0
@@ -90,7 +107,10 @@ def locate_center_all_screens(image_paths, confidence=0.8, region=None):
     best_scores = {}
     for image_path in image_paths:
         try:
-            box = pyscreeze.locate(image_path, search_image, confidence=confidence)
+            # PyScreeze/OpenCV accepts a filename string, but not pathlib.Path.
+            # Keep the original Path for useful logs while passing a supported
+            # value to the image matcher.
+            box = pyscreeze.locate(str(image_path), search_image, confidence=confidence)
         except pyscreeze.ImageNotFoundException as exc:
             box = None
             match = _CONFIDENCE_RE.search(str(exc))
@@ -173,9 +193,13 @@ def wait_for_image_and_click(image_path, confidence=0.8, click_at=None, repeat=F
             log(f"Timed out after {timeout}s waiting for '{image_path}'.")
             return False
 
-        location, matched_image, best_scores = locate_center_all_screens(
-            image_path, confidence=confidence, region=region
-        )
+        try:
+            location, matched_image, best_scores = locate_center_all_screens(
+                image_path, confidence=confidence, region=region
+            )
+        except ScreenCaptureUnavailableError as exc:
+            log(str(exc))
+            return False
         now = time.time()
 
         if location is not None:
@@ -234,7 +258,12 @@ if __name__ == "__main__":
     # Fotos do botão (coloque os arquivos nesta mesma pasta). Pode ter mais
     # de uma variante — o bot testa todas a cada varredura e usa a primeira
     # que bater, útil se o botão não renderiza sempre pixel-a-pixel igual.
-    BUTTON_IMAGES = ["botao.png", "botao2.png"]
+    # Caminhos absolutos permitem executar o script de qualquer diretório.
+    BUTTON_IMAGES = [_SCRIPT_DIR / "botao.png", _SCRIPT_DIR / "botao2.png"]
+
+    missing_images = [str(path) for path in BUTTON_IMAGES if not path.is_file()]
+    if missing_images:
+        raise SystemExit(f"Imagem(ns) de referência não encontrada(s): {', '.join(missing_images)}")
 
     # 0 = clica IMEDIATAMENTE assim que o botão ficar disponível (é uma
     # corrida por vaga, então velocidade de clique importa aqui). A
@@ -257,7 +286,7 @@ if __name__ == "__main__":
     # Fica rodando em loop, sem prazo pra desistir de esperar o botão surgir:
     # clica no instante em que ele aparecer em qualquer monitor, cobrindo as
     # janelas do Chrome nas portas 9222 e 9223. Pare com Ctrl+C.
-    wait_for_image_and_click(
+    succeeded = wait_for_image_and_click(
         BUTTON_IMAGES,
         repeat=True,
         click_delay=CLICK_DELAY_SECONDS,
@@ -267,3 +296,5 @@ if __name__ == "__main__":
     )
 
     print("--- Script finalizado ---")
+    if not succeeded:
+        raise SystemExit(2)

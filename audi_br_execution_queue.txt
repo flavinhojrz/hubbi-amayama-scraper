@@ -1,0 +1,21 @@
+RS4 Avant quattro|RS4-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs4-avant-quattro/rs4-br
+Q3|AQ3-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q3/aq3-br
+RS6 plus Avant quattro|RS6-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs6-plus-avant-quattro/rs6-br
+RS3 Sportback|RS3-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs3-sportback/rs3-br
+RSQ3|RSQ3-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rsq3/rsq3-br
+RS7 Sportback|RS7-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs7-sportback/rs7-br
+A6 Allroad|A6AR-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-allroad/a6ar-br
+TTRS Coupe/Roadster|TTRS-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/ttrs-coupe-roadster/ttrs-br
+A3|AA3-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3/aa3-br
+A5/S5 Cabriolet|A5CA-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a5-s5-cabriolet/a5ca-br
+R8 Spyder|R8-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/r8-spyder/r8-br
+A7 Sportback|A7-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a7-sportback/a7-br
+Q7|AQ7-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q7/aq7-br
+A1|A1-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a1/a1-br
+A3 Cabriolet|A3CA-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-cabriolet/a3ca-br
+TT Coupe/Roadster|ATT-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/tt-coupe-roadster/att-br
+A8/S8 quattro|A8Q-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a8-s8-quattro/a8q-br
+A6/S6 Avant quattro|A6Q-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-s6-avant-quattro/a6q-br
+A5/S5 Coupe/Sportback|A5CO-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a5-s5-coupe-sportback/a5co-br
+A4 Avant|A4-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a4-avant/a4-br
+A3 Sportback|A3-BR|https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-sportback/a3-br

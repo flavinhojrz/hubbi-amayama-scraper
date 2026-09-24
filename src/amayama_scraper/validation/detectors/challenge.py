@@ -37,6 +37,7 @@ sinal de challenge.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
@@ -154,9 +155,22 @@ def _detect_recaptcha_dom(soup: BeautifulSoup) -> bool:
     return False
 
 
-def detect_challenge(html: str) -> DetectionResult:
+def detect_challenge(html: str, *, source_url: str | None = None) -> DetectionResult:
+    """Detecta challenge no conteúdo ou no redirect inequívoco do Amayama.
+
+    ``/captcha.html`` é uma página de challenge do próprio site, observada
+    como URL efetiva após navegação. Ao contrário de um redirect genérico,
+    esse path é um sinal autoritativo e deve entrar no mesmo fluxo humano de
+    qualquer challenge visível no HTML.
+    """
     lowered = html.lower()
     evidence: dict[str, object] = {}
+
+    captcha_redirect = False
+    if source_url is not None:
+        captcha_redirect = urlparse(source_url).path.rstrip("/").lower().endswith("/captcha.html")
+        if captcha_redirect:
+            evidence["source_url_markers"] = ["/captcha.html"]
 
     soup = BeautifulSoup(html, "lxml")
     title_text = ""
@@ -183,5 +197,5 @@ def detect_challenge(html: str) -> DetectionResult:
     if text_hits:
         evidence["text_markers"] = text_hits
 
-    detected = bool(title_hits or id_class_hits or text_hits)
+    detected = bool(captcha_redirect or title_hits or id_class_hits or text_hits)
     return DetectionResult(detected=detected, evidence=evidence)

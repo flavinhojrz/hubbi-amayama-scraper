@@ -21,6 +21,8 @@ dependencies = [
     # transport/undetected_chrome_adapter.py). Sem relação com nada de
     # build/empacotamento deste projeto.
     "setuptools>=60",
+    "pyautogui>=0.9.54",
+    "opencv-python>=4.10,<5",
 ]
 
 [project.optional-dependencies]

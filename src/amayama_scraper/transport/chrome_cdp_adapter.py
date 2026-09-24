@@ -18,6 +18,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Protocol
@@ -25,6 +26,7 @@ from typing import Protocol
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 
 from amayama_scraper.transport.browser_fetch_js import (
     MAX_URLS_PER_SCRIPT_CALL,
@@ -97,8 +99,32 @@ class ChromeCdpTransport:
 
         options = Options()
         options.add_experimental_option("debuggerAddress", f"{self._host}:{self._port}")
-        factory = webdriver_factory if webdriver_factory is not None else webdriver.Chrome
-        self._driver = factory(options=options)
+        # Em Windows, Selenium Manager pode não localizar uma instalação
+        # corporativa/atualizada do Chrome e tentar baixar metadados (o que
+        # falha em ambientes sem acesso externo). Aponte para o binário local
+        # quando ele existir; o transporte continua anexando ao CDP existente.
+        chrome_candidates = (
+            os.environ.get("AMAYAMA_CHROME_BINARY"),
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        )
+        for candidate in chrome_candidates:
+            if candidate and Path(candidate).is_file():
+                options.binary_location = candidate
+                break
+        if webdriver_factory is not None:
+            self._driver = webdriver_factory(options=options)
+        else:
+            # Prefer a driver already provisioned by Selenium Manager. This
+            # avoids a network lookup on every resumed worker.
+            cached = sorted(
+                Path.home().glob(
+                    ".cache/selenium/chromedriver/win64/*/chromedriver.exe"
+                ),
+                key=lambda p: p.parent.name,
+                reverse=True,
+            )
+            service = Service(str(cached[0])) if cached else None
+            self._driver = webdriver.Chrome(service=service, options=options)
 
     def _check_reachable(self) -> None:
         url = f"http://{self._host}:{self._port}/json/version"

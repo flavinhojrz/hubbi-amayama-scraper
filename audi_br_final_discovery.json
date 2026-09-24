@@ -1,0 +1,291 @@
+{
+  "manufacturer": "AUDI",
+  "source": "https://www.amayama.com/en/genuine-catalogs/audi",
+  "scopes": [
+    {
+      "vehicle_model": "RS4 Avant quattro",
+      "market": "RS4-BR",
+      "specs": 1,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs4-avant-quattro/rs4-br"
+    },
+    {
+      "vehicle_model": "RS4 quattro",
+      "market": "RS4-BR",
+      "specs": 1,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs4-quattro/rs4-br"
+    },
+    {
+      "vehicle_model": "Q3",
+      "market": "AQ3-BR",
+      "specs": 2,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q3/aq3-br"
+    },
+    {
+      "vehicle_model": "RS6 plus Avant quattro",
+      "market": "RS6-BR",
+      "specs": 3,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs6-plus-avant-quattro/rs6-br"
+    },
+    {
+      "vehicle_model": "RS6 quattro",
+      "market": "RS6-BR",
+      "specs": 3,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs6-quattro/rs6-br"
+    },
+    {
+      "vehicle_model": "RS3 Sportback",
+      "market": "RS3-BR",
+      "specs": 4,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs3-sportback/rs3-br"
+    },
+    {
+      "vehicle_model": "RS3 Sportback/Lim.",
+      "market": "RS3-BR",
+      "specs": 4,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs3-sportback-lim/rs3-br"
+    },
+    {
+      "vehicle_model": "RSQ3",
+      "market": "RSQ3-BR",
+      "specs": 5,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rsq3/rsq3-br"
+    },
+    {
+      "vehicle_model": "RSQ3 Sportback",
+      "market": "RSQ3-BR",
+      "specs": 5,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rsq3-sportback/rsq3-br"
+    },
+    {
+      "vehicle_model": "RS7 Sportback",
+      "market": "RS7-BR",
+      "specs": 8,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs7-sportback/rs7-br"
+    },
+    {
+      "vehicle_model": "A6 Allroad",
+      "market": "A6AR-BR",
+      "specs": 12,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-allroad/a6ar-br"
+    },
+    {
+      "vehicle_model": "A6 Allroad quattro",
+      "market": "A6AR-BR",
+      "specs": 12,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-allroad-quattro/a6ar-br"
+    },
+    {
+      "vehicle_model": "TTRS Coupe/Roadster",
+      "market": "TTRS-BR",
+      "specs": 14,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/ttrs-coupe-roadster/ttrs-br"
+    },
+    {
+      "vehicle_model": "Q8",
+      "market": "AQ8-BR",
+      "specs": 27,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q8/aq8-br"
+    },
+    {
+      "vehicle_model": "A3",
+      "market": "AA3-BR",
+      "specs": 28,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3/aa3-br"
+    },
+    {
+      "vehicle_model": "A5/S5 Cabriolet",
+      "market": "A5CA-BR",
+      "specs": 35,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a5-s5-cabriolet/a5ca-br"
+    },
+    {
+      "vehicle_model": "R8 Spyder",
+      "market": "R8-BR",
+      "specs": 66,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/r8-spyder/r8-br"
+    },
+    {
+      "vehicle_model": "A7 Sportback",
+      "market": "A7-BR",
+      "specs": 67,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a7-sportback/a7-br"
+    },
+    {
+      "vehicle_model": "Q7",
+      "market": "AQ7-BR",
+      "specs": 96,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q7/aq7-br"
+    },
+    {
+      "vehicle_model": "A1",
+      "market": "A1-BR",
+      "specs": 117,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a1/a1-br"
+    },
+    {
+      "vehicle_model": "A3 Cabriolet",
+      "market": "A3CA-BR",
+      "specs": 122,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-cabriolet/a3ca-br"
+    },
+    {
+      "vehicle_model": "TT Coupe/Roadster",
+      "market": "ATT-BR",
+      "specs": 135,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/tt-coupe-roadster/att-br"
+    },
+    {
+      "vehicle_model": "TT/TTS Coupe/Roadster",
+      "market": "ATT-BR",
+      "specs": 135,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/tt-tts-coupe-roadster/att-br"
+    },
+    {
+      "vehicle_model": "A8/S8 quattro",
+      "market": "A8Q-BR",
+      "specs": 164,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a8-s8-quattro/a8q-br"
+    },
+    {
+      "vehicle_model": "A6/S6 Avant quattro",
+      "market": "A6Q-BR",
+      "specs": 439,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-s6-avant-quattro/a6q-br"
+    },
+    {
+      "vehicle_model": "A5/S5 Coupe/Sportback",
+      "market": "A5CO-BR",
+      "specs": 454,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a5-s5-coupe-sportback/a5co-br"
+    },
+    {
+      "vehicle_model": "A4 Avant",
+      "market": "A4-BR",
+      "specs": 895,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a4-avant/a4-br"
+    },
+    {
+      "vehicle_model": "A4/S4 Avant",
+      "market": "A4Q-BR",
+      "specs": 895,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a4-s4-avant/a4q-br"
+    },
+    {
+      "vehicle_model": "A4/S4 Avant quattro",
+      "market": "A4Q-BR",
+      "specs": 895,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a4-s4-avant-quattro/a4q-br"
+    },
+    {
+      "vehicle_model": "A3 Sportback",
+      "market": "A3-BR",
+      "specs": 1178,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-sportback/a3-br"
+    },
+    {
+      "vehicle_model": "A3/S3 Sportback / Lim. quattro",
+      "market": "A3-BR",
+      "specs": 1178,
+      "market_index_url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-s3-sportback-lim-quattro/a3-br"
+    }
+  ],
+  "pending": [
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a1/a1-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa1%2Fa1-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-cabriolet/a3ca-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa3-cabriolet%2Fa3ca-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a3-s3-sportback-lim-quattro/a3-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa3-s3-sportback-lim-quattro%2Fa3-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a4-avant/a4-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa4-avant%2Fa4-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a4-s4-avant/a4q-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa4-s4-avant%2Fa4q-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a5-s5-cabriolet/a5ca-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa5-s5-cabriolet%2Fa5ca-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-allroad/a6ar-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa6-allroad%2Fa6ar-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a6-s6-avant-quattro/a6q-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa6-s6-avant-quattro%2Fa6q-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/a8-s8-quattro/a8q-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fa8-s8-quattro%2Fa8q-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q3/aq3-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fq3%2Faq3-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/q7/aq7-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fq7%2Faq7-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/r8-spyder/r8-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fr8-spyder%2Fr8-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs4-avant-quattro/rs4-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Frs4-avant-quattro%2Frs4-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs4-quattro/rs4-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Frs4-quattro%2Frs4-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs6-plus-avant-quattro/rs6-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Frs6-plus-avant-quattro%2Frs6-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rs7-sportback/rs7-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Frs7-sportback%2Frs7-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/rsq3-sportback/rsq3-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Frsq3-sportback%2Frsq3-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/tt-coupe-roadster/att-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Ftt-coupe-roadster%2Fatt-br",
+      "status": "CHALLENGE"
+    },
+    {
+      "url": "https://www.amayama.com/en/genuine-catalogs/epc/audi-overall/ttrs-coupe-roadster/ttrs-br",
+      "effective_url": "https://www.amayama.com/captcha.html?return=%2Fen%2Fgenuine-catalogs%2Fepc%2Faudi-overall%2Fttrs-coupe-roadster%2Fttrs-br",
+      "status": "CHALLENGE"
+    }
+  ],
+  "total_scopes": 31,
+  "total_specs": 7000
+}

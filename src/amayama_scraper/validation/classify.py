@@ -28,11 +28,13 @@ from amayama_scraper.validation.types import CaptureValidationResult, Validation
 __all__ = ["StructureContractNotAvailableError", "classify_capture"]
 
 
-def classify_capture(raw_content: bytes, capture_kind: CaptureKind) -> CaptureValidationResult:
+def classify_capture(
+    raw_content: bytes, capture_kind: CaptureKind, *, source_url: str | None = None
+) -> CaptureValidationResult:
     html = raw_content.decode("utf-8", errors="replace")
     evidence: dict[str, object] = {}
 
-    challenge = detect_challenge(html)
+    challenge = detect_challenge(html, source_url=source_url)
     evidence["challenge_detected"] = challenge.detected
     if challenge.evidence:
         evidence["challenge_evidence"] = challenge.evidence
