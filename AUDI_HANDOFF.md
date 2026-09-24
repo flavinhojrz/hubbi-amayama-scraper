@@ -3,8 +3,8 @@
 ## Provenance
 
 - GitHub branch: `review/worker-pool`
-- GitHub source commit SHA: preenchido após o commit de migração
-- Google Drive handoff folder: preenchido após o upload
+- GitHub source commit SHA: `63ca1599`
+- Google Drive handoff folder: https://drive.google.com/drive/folders/10sMOhZl1d3OHwi_euGuZ2u0dTo2zlu_v
 - Collection database: `audi_mass.db`
 - Database size: `369020928` bytes
 - Database SHA256: `d97c651b73ff85be5a98bd6ef5324f98b62ab5ed0b18c200ab0d84aa7eff00fc`
